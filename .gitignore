@@ -1,0 +1,29 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Runtime data and local backups (Stage 2+)
+*.sqlite3
+*.sqlite3-*
+data/
+backups/
+
+# Node/Vite
+dashboard/node_modules/
+dashboard/dist/
+dashboard/.vite/
+*.tsbuildinfo
+
+# Godot editor/import output
+client/.godot/
+client/.import/
+client/export/
+
+# Editor/OS
+.DS_Store
+.idea/
+.vscode/
