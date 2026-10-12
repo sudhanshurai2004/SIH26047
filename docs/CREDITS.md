@@ -1,6 +1,6 @@
 # Third-party credits and licences
 
-**Generated/reviewed for Stage 1 on 2026-10-12.** The committed lock files are
+**Generated/reviewed for Stage 2 on 2026-10-12.** The committed lock files are
 the source of truth for versions. This document records every package resolved
 by `requirements-dev.lock` and `dashboard/package-lock.json`; it intentionally
 includes development and transitive packages. No AGPL dependency and no
@@ -34,6 +34,7 @@ for distribution, retain the original notices shipped by each package.
 | pydantic_core | 2.50.1 | MIT |
 | pytest | 8.3.5 | MIT |
 | PyYAML | 6.0.2 | MIT |
+| SQLAlchemy | 2.1.4 | MIT |
 | referencing | 0.37.0 | MIT |
 | rpds-py | 2026.9.1 | MIT |
 | ruff | 0.11.7 | MIT |

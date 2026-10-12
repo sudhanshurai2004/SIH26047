@@ -1,6 +1,7 @@
 # Resolved runtime dependency lock for Python 3.11 on 2026-10-12.
 # Install with: python -m pip install -r requirements.lock
 PyYAML==6.0.2
+SQLAlchemy==2.1.4
 annotated-types==0.8.0
 anyio==4.15.1
 attrs==26.1.0

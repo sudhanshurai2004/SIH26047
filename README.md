@@ -11,20 +11,24 @@ An offline desktop trainer is being built in staged increments:
 - **Godot 4 client** — 2D-first playback and event recording; 3D is deferred.
 - **React dashboard** — local AAR, replay, individual progress, and unit trends.
 
-## Stage 1 status
+## Stage 2 status
 
-Stage 1 (T1/T2) is complete in this checkout:
+Stages 1–2 (T1–T5) are complete in this checkout:
 
 - repository skeleton, pinned tooling, GitHub Actions CI, and a one-command
   local development workflow;
 - frozen JSON Schema Draft 2020-12 contracts for scenarios, trainee events, and
   editable doctrine, with valid and invalid samples and automated tests;
-- a local FastAPI health endpoint and a React/Vite/TypeScript dashboard shell;
-- a clearly labelled, abstract `doctrine/generic_demo.yaml` placeholder; and
-- dependency/licence attribution in [`docs/CREDITS.md`](docs/CREDITS.md).
+- deterministic generator V0: one precomputed abstract target trajectory per
+  seeded scenario, with schema, validity, and solvability checks;
+- local SQLite ORM models for users, sessions, event-id idempotency, session
+  interruption, role checks, and salted PIN hashes;
+- deterministic decision-tree scoring driven by validated doctrine YAML; and
+- a clearly labelled, abstract `doctrine/generic_demo.yaml` placeholder plus
+  dependency/licence attribution in [`docs/CREDITS.md`](docs/CREDITS.md).
 
-Scenario generation, session persistence, scoring, authentication, and Godot
-playback begin in later stages. No performance number or benchmark is claimed.
+Godot playback and the dashboard AAR workflow begin in Stage 3. No performance
+number or benchmark is claimed.
 
 ## Prerequisites
 
@@ -82,6 +86,26 @@ See [`contracts/README.md`](contracts/README.md) for the Stage 1 freeze and
 compatibility rule. YAML is loaded only with `yaml.safe_load`, then schema
 validated. Future upload endpoints must use `core.contracts.load_and_validate`.
 
+## Stage 2 scoring and local session rules
+
+- `core.generator.generate_scenario` uses a local seeded NumPy `PCG64`
+  generator and canonical JSON output. The same seed, profile, and generator
+  version produce byte-identical scenario bytes.
+- `core.scoring.score_scenario` is pure: it reads action weights, timing
+  thresholds, decision-tree branches, and permitted abstract responses from
+  doctrine YAML. Detection delay is always `event.t_offset_ms - t_visible_ms`.
+- SQLite sessions persist canonical scenario/event JSON. Event UUIDs are
+  idempotency keys; reusing an ID with different content is rejected.
+- A `session_interrupted` event marks the session interrupted and
+  `rating_eligible=false`. Future skill-rating code must exclude those rows.
+- Only `trainee`, `instructor`, and `admin` roles are accepted. PINs use salted
+  PBKDF2-SHA256 hashes; plaintext PINs are never stored.
+
+The Blueprint PDF content was not readable in this workspace, and the user
+asked to proceed from the prompt only. Therefore no synthetic replacement for
+Blueprint golden scenarios G1–G10 was created. See
+[`docs/DECISIONS.md`](docs/DECISIONS.md).
+
 ## Repository layout
 
 ```text
@@ -103,10 +127,10 @@ tests/          Automated contract and API tests
 - Ultralytics YOLO and AGPL dependencies are not used.
 - The generic doctrine is explicitly a placeholder and uses only abstract
   responses (`monitor`, `report`, `escalate`, `defer`).
-- Stage 2 will use a seeded NumPy generator only, precompute trajectories, and
-  keep generation/scoring free of global randomness and wall-clock time.
-- Detection-delay scoring will be measured from contract `t_visible_ms`, not
-  scenario start, with weights and bounds read from validated doctrine YAML.
+- Stage 2 uses a seeded NumPy generator only, precomputes trajectories, and
+  keeps generation/scoring free of global randomness and wall-clock time.
+- Detection-delay scoring is measured from contract `t_visible_ms`, not
+  scenario start, with weights and response bounds read from validated doctrine YAML.
 
 Implementation choices made because the referenced blueprint was not available
 in this checkout are recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md).
