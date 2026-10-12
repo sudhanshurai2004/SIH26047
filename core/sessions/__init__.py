@@ -6,6 +6,7 @@ from core.sessions.service import (
     SessionManager,
     SessionManagerError,
     SessionSnapshot,
+    SessionSummary,
 )
 
 __all__ = [
@@ -14,4 +15,5 @@ __all__ = [
     "SessionManager",
     "SessionManagerError",
     "SessionSnapshot",
+    "SessionSummary",
 ]

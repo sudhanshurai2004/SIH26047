@@ -1,6 +1,6 @@
 # Third-party credits and licences
 
-**Generated/reviewed for Stage 2 on 2026-10-12.** The committed lock files are
+**Generated/reviewed for the local MVP implementation on 2026-10-12.** The committed lock files are
 the source of truth for versions. This document records every package resolved
 by `requirements-dev.lock` and `dashboard/package-lock.json`; it intentionally
 includes development and transitive packages. No AGPL dependency and no
@@ -9,6 +9,12 @@ Ultralytics YOLO dependency is used.
 The project itself has no licence declaration yet. This list does not grant any
 licence to project source code. Licence identifiers below are package metadata;
 for distribution, retain the original notices shipped by each package.
+
+## Runtime tooling
+
+| Tool | Version | Licence |
+| --- | ---: | --- |
+| Godot Engine | 4.x (optional local client runtime) | MIT |
 
 ## Python packages
 

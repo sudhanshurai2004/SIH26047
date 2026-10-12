@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sqlalchemy import Engine, create_engine, event
+from sqlalchemy import Engine, create_engine, event, inspect, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from core.db.models import Base
@@ -41,5 +41,24 @@ def create_session_factory(engine: Engine) -> sessionmaker[Session]:
 
 
 def initialize_database(engine: Engine) -> None:
-    """Create the Stage 2 local tables if they do not already exist."""
+    """Create local tables and apply the small additive SQLite compatibility migration."""
     Base.metadata.create_all(engine)
+    existing_columns = {
+        column["name"] for column in inspect(engine).get_columns("training_sessions")
+    }
+    with engine.begin() as connection:
+        # These migrations are fixed source statements, not interpolated user queries.
+        if "selection_mode" not in existing_columns:
+            connection.execute(
+                text(
+                    "ALTER TABLE training_sessions ADD COLUMN selection_mode "
+                    "TEXT NOT NULL DEFAULT 'fixed'"
+                )
+            )
+        if "rating_applied" not in existing_columns:
+            connection.execute(
+                text(
+                    "ALTER TABLE training_sessions ADD COLUMN rating_applied "
+                    "BOOLEAN NOT NULL DEFAULT 0"
+                )
+            )

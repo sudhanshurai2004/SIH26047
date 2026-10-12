@@ -10,12 +10,12 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 from hashlib import sha256
-from math import cos, hypot, isfinite, pi, sin
+from math import cos, hypot, pi, sin
 from typing import Any
 
 import numpy as np
 
-from core.contracts import ContractValidationError, validate_payload
+from core.generator.validation import ScenarioValidationError, validate_playback_scenario
 from core.serialization import canonical_json, canonical_json_bytes
 
 GENERATOR_VERSION = "0.1.0"
@@ -24,7 +24,7 @@ DEFAULT_TIME_STEP_MS = 1_000
 MIN_ACTION_WINDOW_MS = 3_000
 
 
-class ScenarioGenerationError(ValueError):
+class ScenarioGenerationError(ScenarioValidationError):
     """Raised when a generated or supplied V0 scenario is not solvable."""
 
 
@@ -130,8 +130,8 @@ def generate_scenario(
 def validate_scenario(scenario: Mapping[str, Any]) -> None:
     """Check both the frozen contract and V0's single-target solvability rules."""
     try:
-        validate_payload("scenario", scenario)
-    except ContractValidationError as error:
+        validate_playback_scenario(scenario)
+    except ScenarioValidationError as error:
         raise ScenarioGenerationError(str(error)) from error
 
     errors: list[str] = []
@@ -144,25 +144,8 @@ def validate_scenario(scenario: Mapping[str, Any]) -> None:
             errors.append("V0 target must use entity_class 'uas'")
         if target["affiliation"] != "simulated_threat":
             errors.append("V0 target must use affiliation 'simulated_threat'")
-
-        trajectory = target["trajectory"]
-        times = [point["t_ms"] for point in trajectory]
-        duration_ms = scenario["duration_ms"]
-        time_step_ms = scenario["time_step_ms"]
-        if times[0] != 0 or times[-1] != duration_ms:
-            errors.append("trajectory must start at 0 and end at duration_ms")
-        if any(later - earlier != time_step_ms for earlier, later in zip(times, times[1:])):
-            errors.append("trajectory timestamps must advance by time_step_ms")
-        if target["t_visible_ms"] not in times:
-            errors.append("t_visible_ms must be a precomputed trajectory timestamp")
-        if duration_ms - target["t_visible_ms"] < MIN_ACTION_WINDOW_MS:
+        if int(scenario["duration_ms"]) - int(target["t_visible_ms"]) < MIN_ACTION_WINDOW_MS:
             errors.append("target must remain actionable for the minimum decision window")
-        if any(
-            not isfinite(point[axis])
-            for point in trajectory
-            for axis in ("x_m", "y_m", "altitude_m")
-        ):
-            errors.append("trajectory coordinates must be finite")
 
     if errors:
         raise ScenarioGenerationError("; ".join(errors))

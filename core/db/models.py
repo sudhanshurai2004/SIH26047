@@ -49,9 +49,38 @@ class TrainingSessionRecord(Base):
         ForeignKey("users.user_id", ondelete="RESTRICT"), nullable=False
     )
     scenario_json: Mapped[str] = mapped_column(Text, nullable=False)
+    selection_mode: Mapped[str] = mapped_column(String(16), nullable=False, default="fixed")
     status: Mapped[str] = mapped_column(String(16), nullable=False)
     rating_eligible: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    rating_applied: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     score_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class DoctrineRecord(Base):
+    """Validated doctrine YAML stored locally for replayable evaluation."""
+
+    __tablename__ = "doctrines"
+    __table_args__ = (UniqueConstraint("doctrine_id", "version", name="uq_doctrine_id_version"),)
+
+    record_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    doctrine_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    version: Mapped[str] = mapped_column(String(64), nullable=False)
+    yaml_text: Mapped[str] = mapped_column(Text, nullable=False)
+
+
+class SkillRatingRecord(Base):
+    """Per-trainee Elo-style state for one abstract skill tag."""
+
+    __tablename__ = "skill_ratings"
+    __table_args__ = (UniqueConstraint("trainee_id", "skill_tag", name="uq_skill_trainee_tag"),)
+
+    record_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    trainee_id: Mapped[str] = mapped_column(
+        ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False
+    )
+    skill_tag: Mapped[str] = mapped_column(String(32), nullable=False)
+    rating: Mapped[float] = mapped_column(nullable=False)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
 
 class TraineeEventRecord(Base):

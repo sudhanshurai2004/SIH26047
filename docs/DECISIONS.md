@@ -36,8 +36,8 @@ is configured to send telemetry or call a remote service.
 abstract placeholder so later scoring has a versioned fixture. It contains no
 weapon operation, targeting, electronic-warfare technique, or real doctrine.
 
-**Consequence:** Stage 2 must read scoring weights and permitted abstract
-responses exclusively from this validated YAML contract, not hard-code them.
+**Consequence:** Scoring reads action weights and permitted abstract responses
+exclusively from validated YAML contract data, not hard-coded values.
 
 ## D-004 — Blueprint golden-scenario limitation (2026-10-12)
 
@@ -45,13 +45,13 @@ responses exclusively from this validated YAML contract, not hard-code them.
 reported `/home/user/uploads/` path was not mounted in this workspace. When
 asked how to proceed, the user selected **“Proceed from the prompt only.”**
 
-**Decision:** Implement T3–T5 from the explicit Stage 2 summary and add
-hand-checked tests for the generic demo doctrine, without claiming those tests
-are Blueprint golden scenarios. Do not invent G1–G10 inputs, scores, or
-benchmark data.
+**Decision:** Implement the explicit prompt scope and add hand-checked tests
+for the generic demo doctrine, without claiming those tests are Blueprint golden
+scenarios. Do not invent G1–G10 inputs, scores, or benchmark data.
 
 **Consequence:** The required Blueprint G1–G10 golden-fixture suite remains
-unmeasured and must be added from the supplied source material before MVP lock.
+unmeasured and must be added from the supplied source material before an MVP
+lock that requires it.
 
 ## D-005 — V0 detection-delay credit curve (2026-10-12)
 
@@ -66,3 +66,53 @@ validated doctrine thresholds.
 **Consequence:** The generic demo scoring tests state their arithmetic. Replace
 this formula only through a versioned doctrine/contract decision once the
 Blueprint scoring specification is available.
+
+## D-006 — Continue from the supplied prompt when the attached PDF is unavailable (2026-10-12)
+
+**Context:** The Execution Blueprint was attached again, but the declared
+`/home/user/uploads/SIH 26247 Execution Blueprint.pdf` path is not mounted in
+this coding workspace. The user explicitly asked to continue without repeated
+questions.
+
+**Decision:** Continue implementation from the explicit project prompt and the
+frozen contracts. Do not claim that unavailable Blueprint-specific values (in
+particular G1–G10 fixtures or performance targets) have been reproduced.
+
+**Consequence:** Later functionality remains generic, training-only, and is
+covered by real local tests. Blueprint-specific acceptance items remain labelled
+unmeasured until its contents become accessible.
+
+## D-007 — V1 sensor traces preserve the frozen scenario contract (2026-10-12)
+
+**Context:** The frozen scenario contract records a target's precomputed
+`t_visible_ms`, but has no field for a complete sensor trace.
+
+**Decision:** Generate deterministic visibility/noise/dropout traces with
+caller-local NumPy PCG64 generators. Keep the trace as a generator/replay
+artifact and persist only its precomputed first-visible logical offset in the
+contract scenario.
+
+**Consequence:** V1 generation remains byte-stable for seed/profile/version and
+scoring still measures detection relative to `t_visible_ms`. Adding serialized
+sensor samples later requires a new contract version rather than an extra v1
+field.
+
+## D-008 — Generic adaptive model and evidence boundaries (2026-10-12)
+
+**Decision:** Use a small persisted per-skill Elo-style adjustment with a stable
+weakest-skill selector. Analyze adaptive-vs-fixed, unseen seeds, and repetition
+only from recorded SQLite scored-session data; scripts refuse missing data.
+
+**Consequence:** The project provides an auditable local pilot mechanism, not a
+claim that adaptive training outperforms fixed training. No pilot result,
+retention result, or student-performance number is bundled.
+
+## D-009 — Godot validation boundary (2026-10-12)
+
+**Decision:** Ship a Godot 4 project with a 2D default scene, local event outbox,
+optional 3D presentation toggles, and a documented 30-FPS cap target. Test its
+files and bundled scenario pack statically when Godot is unavailable.
+
+**Consequence:** The source is integrated with the local API bridge, but no
+runtime Godot rendering, interaction, or frame-rate result is claimed until a
+Godot executable validates it on target hardware.

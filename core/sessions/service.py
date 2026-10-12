@@ -16,8 +16,8 @@ from sqlalchemy.orm import Session, sessionmaker
 from core.contracts import ContractValidationError, validate_payload
 from core.db.models import Role, SessionStatus, TraineeEventRecord, TrainingSessionRecord, User
 from core.db.security import AuthorizationError, hash_pin, require_role, verify_pin
-from core.generator import ScenarioGenerationError, validate_scenario
-from core.scoring import ScoreReport, load_doctrine, score_scenario
+from core.generator import ScenarioValidationError, validate_playback_scenario
+from core.scoring import ScoreReport, load_doctrine, score_scenario, validate_doctrine
 from core.serialization import canonical_json
 
 USER_ID_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9_-]{2,63}$")
@@ -48,10 +48,25 @@ class SessionSnapshot:
     session_id: str
     scenario: dict[str, Any]
     trainee_id: str
+    selection_mode: str
     status: str
     rating_eligible: bool
+    rating_applied: bool
     events: tuple[dict[str, Any], ...]
     score: dict[str, Any] | None
+
+
+@dataclass(frozen=True)
+class SessionSummary:
+    """Small session-list record that omits trajectory and event payloads."""
+
+    session_id: str
+    scenario_id: str
+    trainee_id: str
+    selection_mode: str
+    status: str
+    rating_eligible: bool
+    total_score: float | None
 
 
 class SessionManager:
@@ -93,6 +108,7 @@ class SessionManager:
         session_id: str,
         trainee_id: str,
         scenario: Mapping[str, Any],
+        selection_mode: str = "fixed",
     ) -> None:
         """Persist one generated V0 scenario for a trainee.
 
@@ -100,9 +116,11 @@ class SessionManager:
         validated before persistence so playback never reads an invalid record.
         """
         _validate_session_id(session_id)
+        if selection_mode not in {"fixed", "adaptive"}:
+            raise SessionManagerError("selection_mode must be 'fixed' or 'adaptive'")
         try:
-            validate_scenario(scenario)
-        except ScenarioGenerationError as error:
+            validate_playback_scenario(scenario)
+        except ScenarioValidationError as error:
             raise SessionManagerError(str(error)) from error
 
         with self._session_factory.begin() as db:
@@ -118,8 +136,10 @@ class SessionManager:
                     scenario_id=str(scenario["scenario_id"]),
                     trainee_id=trainee_id,
                     scenario_json=canonical_json(scenario),
+                    selection_mode=selection_mode,
                     status=SessionStatus.ACTIVE.value,
                     rating_eligible=True,
+                    rating_applied=False,
                     score_json=None,
                 )
             )
@@ -208,10 +228,16 @@ class SessionManager:
         *,
         actor_id: str,
         session_id: str,
-        doctrine_path: Path,
+        doctrine_path: Path | None = None,
+        doctrine: Mapping[str, Any] | None = None,
     ) -> ScoreReport:
         """Score a completed/interrupted session and store its deterministic AAR."""
-        doctrine = load_doctrine(doctrine_path)
+        if (doctrine_path is None) == (doctrine is None):
+            raise SessionManagerError("provide exactly one doctrine path or doctrine payload")
+        if doctrine is None:
+            doctrine = load_doctrine(doctrine_path)
+        else:
+            validate_doctrine(doctrine)
         with self._session_factory.begin() as db:
             actor = _get_actor(db, actor_id)
             require_role(actor, [Role.INSTRUCTOR, Role.ADMIN])
@@ -238,6 +264,51 @@ class SessionManager:
             training_session.score_json = canonical_json(report.as_dict())
             return report
 
+    def mark_rating_applied(self, *, actor_id: str, session_id: str) -> None:
+        """Mark a scored eligible session consumed by the skill model exactly once."""
+        with self._session_factory.begin() as db:
+            require_role(db.get(User, actor_id), [Role.INSTRUCTOR, Role.ADMIN])
+            training_session = _get_session(db, session_id)
+            if not training_session.rating_eligible:
+                return
+            if training_session.score_json is None:
+                raise SessionManagerError("session must be scored before applying skill ratings")
+            training_session.rating_applied = True
+
+    def list_sessions(
+        self,
+        *,
+        actor_id: str,
+        trainee_id: str | None = None,
+    ) -> tuple[SessionSummary, ...]:
+        """List sessions visible to the requesting local role."""
+        with self._session_factory() as db:
+            actor = _get_actor(db, actor_id)
+            visible_trainee_id = trainee_id
+            if actor.role == Role.TRAINEE.value:
+                if trainee_id is not None and trainee_id != actor.user_id:
+                    raise AuthorizationError("trainees may only list their own sessions")
+                visible_trainee_id = actor.user_id
+            query = select(TrainingSessionRecord).order_by(TrainingSessionRecord.session_id)
+            if visible_trainee_id is not None:
+                query = query.where(TrainingSessionRecord.trainee_id == visible_trainee_id)
+            return tuple(
+                SessionSummary(
+                    session_id=row.session_id,
+                    scenario_id=row.scenario_id,
+                    trainee_id=row.trainee_id,
+                    selection_mode=row.selection_mode,
+                    status=row.status,
+                    rating_eligible=row.rating_eligible,
+                    total_score=(
+                        float(json.loads(row.score_json).get("total_score", 0.0))
+                        if row.score_json
+                        else None
+                    ),
+                )
+                for row in db.scalars(query)
+            )
+
     def get_snapshot(self, *, actor_id: str, session_id: str) -> SessionSnapshot:
         """Read a session only if the actor is its trainee or instructional staff."""
         with self._session_factory() as db:
@@ -257,8 +328,10 @@ class SessionManager:
                 session_id=training_session.session_id,
                 scenario=json.loads(training_session.scenario_json),
                 trainee_id=training_session.trainee_id,
+                selection_mode=training_session.selection_mode,
                 status=training_session.status,
                 rating_eligible=training_session.rating_eligible,
+                rating_applied=training_session.rating_applied,
                 events=events,
                 score=score,
             )

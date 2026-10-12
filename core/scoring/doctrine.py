@@ -7,6 +7,8 @@ from math import isclose
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 from core.contracts import ContractValidationError, load_and_validate, validate_payload
 
 
@@ -20,6 +22,18 @@ def load_doctrine(path: Path) -> dict[str, Any]:
         doctrine = load_and_validate("doctrine", path)
     except ContractValidationError as error:
         raise DoctrineValidationError(str(error)) from error
+    if not isinstance(doctrine, dict):
+        raise DoctrineValidationError("doctrine root must be an object")
+    validate_doctrine(doctrine)
+    return doctrine
+
+
+def parse_doctrine_text(yaml_text: str) -> dict[str, Any]:
+    """Safely parse and validate uploaded doctrine text without executing YAML tags."""
+    try:
+        doctrine = yaml.safe_load(yaml_text)
+    except yaml.YAMLError as error:
+        raise DoctrineValidationError("doctrine YAML could not be parsed safely") from error
     if not isinstance(doctrine, dict):
         raise DoctrineValidationError("doctrine root must be an object")
     validate_doctrine(doctrine)
