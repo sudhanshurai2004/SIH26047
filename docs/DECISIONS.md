@@ -116,3 +116,27 @@ files and bundled scenario pack statically when Godot is unavailable.
 **Consequence:** The source is integrated with the local API bridge, but no
 runtime Godot rendering, interaction, or frame-rate result is claimed until a
 Godot executable validates it on target hardware.
+
+## D-010 — Proposed G1–G10 pack compatibility boundary (2026-10-13)
+
+**Context:** The user supplied a hand-authored, explicitly proposed G1–G10
+pack in `docs/input/` and `tests/golden/`; it is not recovered Blueprint data.
+The pack's flat doctrine (`weights.time`, class-specific response matrices),
+uppercase events (`DETECT`, `CLASSIFY`, `RESPOND`), and action vocabulary do
+not conform to the frozen contract-v1 schema or the production generic doctrine
+shape.
+
+**Decision:** Preserve the supplied five pack files verbatim and add
+`core.scoring.proposed_golden` as a test-only compatibility evaluator. It
+reproduces the supplied reference scorer's timing, duplicate-ID, interruption,
+critical-penalty, and friendly-cap semantics without changing the frozen
+production contracts. Standard session ingestion deliberately retains stricter
+behavior for a duplicate event ID bound to a *different* payload: it rejects a
+conflict rather than silently ignoring it. The supplied G8 retries have
+identical payloads and match exactly.
+
+**Consequence:** G1–G10 are now automated proposed-spec regression tests, not
+claims about unavailable Blueprint numbers or real doctrine. The generic
+placeholder remains labelled as such. If a later Blueprint requires these
+semantics in the production contract, introduce a versioned contract/doctrine
+migration instead of silently widening v1.

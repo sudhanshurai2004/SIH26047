@@ -12,7 +12,14 @@ addopts = "-ra"
 [tool.ruff]
 target-version = "py311"
 line-length = 100
-extend-exclude = [".venv", "dashboard/node_modules", "dashboard/dist"]
+extend-exclude = [
+  ".venv",
+  "dashboard/node_modules",
+  "dashboard/dist",
+  # Preserve the hand-supplied reference implementation byte-for-byte.
+  "tests/golden/reference_scorer.py",
+  "tests/golden/test_golden_reference.py",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]

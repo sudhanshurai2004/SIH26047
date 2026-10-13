@@ -7,6 +7,13 @@ from core.scoring.doctrine import (
     validate_doctrine,
 )
 from core.scoring.engine import NodeResult, ScoreReport, ScoringError, score_scenario
+from core.scoring.proposed_golden import (
+    ProposedGoldenScore,
+    ProposedGoldenSpecError,
+    load_proposed_golden_doctrine,
+    score_proposed_golden_case,
+    validate_proposed_golden_doctrine,
+)
 from core.scoring.repository import DoctrineRepository, DoctrineUploadResult
 
 __all__ = [
@@ -14,10 +21,15 @@ __all__ = [
     "DoctrineUploadResult",
     "DoctrineValidationError",
     "NodeResult",
+    "ProposedGoldenScore",
+    "ProposedGoldenSpecError",
     "ScoreReport",
     "ScoringError",
     "load_doctrine",
+    "load_proposed_golden_doctrine",
     "parse_doctrine_text",
+    "score_proposed_golden_case",
     "score_scenario",
     "validate_doctrine",
+    "validate_proposed_golden_doctrine",
 ]

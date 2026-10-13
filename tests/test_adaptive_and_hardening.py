@@ -166,18 +166,30 @@ def test_doctrine_upload_is_validated_and_idempotent(tmp_path: Path) -> None:
 
     assert first.created is True
     assert second.created is False
+    active_doctrine = repository.get(
+        actor_id="trainee-001",
+        doctrine_id="generic-demo-v1",
+        version="1.0.0",
+    )
+    assert active_doctrine["doctrine_id"] == "generic-demo-v1"
+    with pytest.raises(DoctrineValidationError):
+        repository.upload(
+            actor_id="instructor-001", yaml_text="!!python/object/apply:os.system ['x']"
+        )
+    with pytest.raises(DoctrineValidationError, match="weights must sum"):
+        repository.upload(
+            actor_id="instructor-001",
+            yaml_text=yaml_text.replace("detect: 0.40", "detect: 0.45"),
+        )
+    # G10 equivalent: validation fails before the existing active record is replaced.
     assert (
         repository.get(
             actor_id="trainee-001",
             doctrine_id="generic-demo-v1",
             version="1.0.0",
-        )["doctrine_id"]
-        == "generic-demo-v1"
-    )
-    with pytest.raises(DoctrineValidationError):
-        repository.upload(
-            actor_id="instructor-001", yaml_text="!!python/object/apply:os.system ['x']"
         )
+        == active_doctrine
+    )
     with pytest.raises(AuthorizationError):
         repository.upload(actor_id="trainee-001", yaml_text=yaml_text)
     assert manager.authenticate_pin("admin-001", "1234")

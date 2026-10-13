@@ -5,7 +5,7 @@ VENV ?= .venv
 VENV_PYTHON := $(VENV)/bin/python
 VENV_PIP := $(VENV)/bin/pip
 
-.PHONY: setup python-install dashboard-install dev test self-test lint format-check dashboard-build ci package clean
+.PHONY: setup python-install dashboard-install dev test golden-test self-test lint format-check dashboard-build ci package clean
 
 # Install exactly the versions captured in the committed lock files.
 setup: python-install dashboard-install
@@ -23,6 +23,9 @@ dev:
 
 test:
 	"$(VENV_PYTHON)" -m pytest
+
+golden-test:
+	PYTHONPATH=. "$(VENV_PYTHON)" -m pytest tests/golden
 
 self-test:
 	PYTHONPATH=. "$(VENV_PYTHON)" scripts/self_test.py

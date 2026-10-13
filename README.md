@@ -31,11 +31,12 @@ components:
 - Godot 2D playback/event outbox/local API bridge and optional 3D presentation;
 - a headless self-test, source-package script, and real-session experiment scripts.
 
-The attached Execution Blueprint PDF was not mounted into this workspace even
-though its path was supplied. Per the user's instruction, implementation used
-the explicit prompt and frozen contracts without inventing missing
-Blueprint-specific data. Consequently **G1–G10 Blueprint golden fixtures and
-any Blueprint-only benchmark/performance target remain unmeasured**. See
+The Execution Blueprint PDF is still unavailable in this workspace. A
+hand-authored **proposed** G1–G10 pack is preserved under
+[`tests/golden/`](tests/golden/) and its reference scorer plus the core
+compatibility evaluator agree within `0.01`. It is explicitly **not** claimed
+as recovered Blueprint data or real doctrine. Blueprint-only requirements and
+any hardware/performance target remain unmeasured. See
 [`docs/DECISIONS.md`](docs/DECISIONS.md).
 
 ## Prerequisites
@@ -95,6 +96,9 @@ it writes event data only to the local Godot outbox.
 ```bash
 # Tests, lint, formatting, self-test, and dashboard production build.
 make ci
+
+# Run the supplied reference scorer and core-scoring G1–G10 compatibility tests.
+make golden-test
 
 # Audit locked dashboard dependencies.
 npm --prefix dashboard audit --audit-level=high
