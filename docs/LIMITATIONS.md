@@ -47,9 +47,12 @@ claim of operational suitability.
 
 ## Godot and performance
 
-- Godot 4 was **not installed** in the validation environment on 2026-10-15.
-  The Godot project, 2D interaction, 3D scene, local bridge at runtime,
-  rendering, startup time, and FPS are therefore **not verified**.
+- Godot 4 was **not installed locally** in this validation environment. GitHub
+  Actions did run the pinned official Godot 4.5.1 binary headlessly: project
+  import, 2D scene load, seeded seek, and local event-outbox persistence passed;
+  actual logs are in `docs/evidence/godot-*-ci.log`. That CI smoke does not
+  verify user interaction, visual rendering, 3D scene behavior, startup time,
+  or FPS.
 - The optional 3D presentation is not a release claim. The 2D scene is the
   intended fallback. Follow `docs/GODOT_CHECKLIST.md` on the actual target
   laptop and preserve recordings before making any runtime or FPS statement.
@@ -62,8 +65,9 @@ claim of operational suitability.
   signed installer, bundled Python runtime, vendored wheelhouse, or Godot
   export. A Linux CPython-3.11 wheelhouse clean-install command was executed,
   but an air-gapped target laptop still needs a reviewed target-specific Python
-  environment/dependency wheelhouse; actual target package execution remains a
-  user validation action. See `docs/WHEELHOUSE.md`.
+  environment/dependency wheelhouse. CI did run setup plus `launch.bat` with
+  dashboard/API HTTP 200 on `windows-latest`; actual target package execution
+  remains a user validation action. See `docs/WHEELHOUSE.md`.
 - SQLite data and backups are local. OS disk encryption, endpoint management,
   identity policy, retention, and approval for any real deployment are outside
   this repository.

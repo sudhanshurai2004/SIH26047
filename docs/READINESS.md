@@ -16,13 +16,13 @@ actually measured.
 
 | Outcome | Status | Shipped implementation | Executed evidence | Honest boundary |
 | --- | --- | --- | --- | --- |
-| Desktop simulator | Partial | Godot 2D default scene, optional 3D scene, durable event outbox, local dashboard | Static client assertions are part of `make ci` (111 tests). A pinned headless Godot CI job is configured. | Local Godot runtime was unavailable; native CI result, user interaction, visual rendering, startup time, and FPS are not yet verified at this revision. |
+| Desktop simulator | Partial | Godot 2D default scene, optional 3D scene, durable event outbox, local dashboard | GitHub Actions run `38745535797` imported the Godot project, loaded the 2D scene, sought seeded playback, and persisted an outbox event; actual logs are committed. | The headless CI smoke is not user interaction, target-laptop rendering, startup measurement, or FPS measurement. Local target-laptop validation remains required. |
 | Scripted and procedural scenarios | Done | Scripted snapshots; deterministic V0/V1 NumPy generators; demo seeder | `make ci` ran seeded self-test and the disposable three-session demo smoke. | Synthetic training data only; no real threat data. |
 | Environment and swarm variants | Partial | V1 swarm/clutter, environment fields, synthetic `t_visible_ms`, night/rain snapshot | Generator/demo asset tests passed in `make ci`. | Core data is verified; native visual presentation, realism, and performance are not. |
 | Decision-tree scoring | Done | Frozen v1 scoring plus additive native v2 response-matrix/zone/critical/cap/aggregate scoring, per-node AAR | `make golden-test`: 44 passed, including 13 native-v2 production tests. | Both generic doctrines and proposed fixtures are training-only; no approved operational doctrine is supplied. |
 | Individual, unit, repeated-session AAR | Partial | SQLite scores/replay, role/unit-scoped summaries, skill records | `make demo-smoke` recorded, scored, replayed, and summarized two disposable sessions. | Browser/native UI interaction and real trainee/pilot data are not manually validated. |
 | Difficulty and randomisation | Done | Seeded V1 generator, adaptive selector, exact fingerprints, semantic last-five novelty guard | Generator/session tests in `make ci` reject a near duplicate, permit a distinct seed, and prove the last-five window. | Blueprint feature signature/metric/N/threshold are **not found**; Jaccard `>= 0.85`, N=5 is documented local policy, not approved calibration. |
-| Offline minimal-hardware unit use | Partial | SQLite, relative API UI, source package, `launch.sh`/`launch.bat`, wheelhouse tooling | Linux wheelhouse built 28 wheels and clean `--no-index` install passed; packaged Linux launcher returned dashboard/API HTTP 200. A Windows CI smoke is configured. | No target-laptop, Windows CI result, packaged air-gapped target run, Godot export, or hardware/FPS test is yet verified at this revision. |
+| Offline minimal-hardware unit use | Partial | SQLite, relative API UI, source package, `launch.sh`/`launch.bat`, wheelhouse tooling | Linux wheelhouse built 28 wheels and clean `--no-index` install passed; packaged Linux launcher returned dashboard/API HTTP 200. CI run `38745535797` ran Windows setup, packaged source, `launch.bat`, and required dashboard/API HTTP 200. | No air-gapped target-laptop package run, Godot export, or hardware/FPS test is verified. Windows-hosted CI is not a user target laptop. |
 
 **Matrix count: 3 Done / 4 Partial / 0 Missing.** A Partial row must not be
 silently presented as Done.
@@ -95,34 +95,38 @@ This does not verify Windows or an air-gapped target laptop.
 $ make ci
 All checks passed!
 59 files already formatted
-111 passed, 1 warning in 19.23s
+111 passed, 1 warning in 19.11s
 {"rating_eligible": true, "scenario_id": "scenario-4f38d04fd72b2af0", "score": 100.0, "status": "ok"}
 DEMO_SMOKE_OK: ...
-vite ... built in 835ms
+vite ... built in 811ms
 ```
 
 The one warning is Starlette's dependency deprecation warning for
 `anyio.abc.BlockingPortal`; it did not fail the suite. `make ci` also ran the
 API-backed demo smoke and production dashboard build.
 
-## GitHub Actions coverage (configured; result pending this revision)
+## GitHub Actions evidence
 
-`.github/workflows/ci.yml` adds three release checks beyond the Linux suite:
+GitHub Actions **run `38745535797`** for commit `519ccd1` completed green on
+2026-10-15. Its recorded job/step result is committed at
+[`evidence/github-ci-38745535797.txt`](evidence/github-ci-38745535797.txt).
 
-1. **Godot 4 native smoke:** downloads official `4.5.1-stable` Linux x86_64
-   binary, verifies SHA-256
+1. **Godot 4 native smoke** downloaded the official `4.5.1-stable` Linux
+   x86_64 binary, verified SHA-256
    `02ec53d1cc7dbb9cc6355393c61b9ab43d1244751a124f10248a4802830788cd`,
-   imports the project, loads the 2D scene, seeks seeded playback, and checks a
-   durable event-outbox record. It uploads logs regardless of outcome.
-2. **Offline wheelhouse:** builds the lockfile wheelhouse, then clean-installs
-   it with no index.
-3. **Windows launcher smoke:** runs `scripts/setup_windows.ps1`, packages the
-   source, starts `launch.bat`, and requires HTTP 200 from both dashboard root
-   and `/api/health`.
+   imported the project, loaded the 2D scene, sought seeded playback, and
+   checked a durable event-outbox record. The exact successful logs are
+   committed at [`evidence/godot-import-ci.log`](evidence/godot-import-ci.log)
+   and [`evidence/godot-headless-ci.log`](evidence/godot-headless-ci.log).
+2. **Offline wheelhouse** built the lockfile wheelhouse and clean-installed it
+   without an index.
+3. **Windows launcher smoke** ran `scripts/setup_windows.ps1`, packaged source,
+   started `launch.bat`, and required HTTP 200 from dashboard root and
+   `/api/health`.
 
-These jobs are configuration, not evidence of success until their resulting CI
-run is green. If the Godot job succeeds, its actual logs will be committed here
-as evidence; no FPS number is collected or claimed by that headless smoke.
+The Godot job is a CI-run headless/software-validation smoke. It reports **no
+FPS number**, makes no rendering-performance claim, and is not target-laptop
+validation. The workflow retains successful Godot logs as tracked evidence.
 
 ## Remaining user/target-laptop work before any real use
 

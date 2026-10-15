@@ -260,3 +260,16 @@ actual small-text evidence.
 development wheels and passed offline install/import. Native Linux wheels are
 not treated as Windows/macOS artifacts; target-specific wheelhouse and
 air-gapped package validation remain required.
+
+## D-019 — CI-native smoke evidence and Windows launcher boundary (2026-10-15)
+
+**Decision:** Pin Godot `4.5.1-stable` Linux x86_64 to its official release
+SHA-256 and run it headlessly in CI for import, 2D scene load, seeded seek, and
+local event-outbox persistence. Preserve the successful raw import/smoke logs
+in the repository. Add a separate `windows-latest` job that runs locked setup,
+packages the source, invokes `launch.bat`, and requires dashboard/API HTTP 200.
+
+**Consequence:** GitHub Actions run `38745535797` passed all those jobs. This is
+CI-run headless/software validation, not a measured FPS result, target-laptop
+rendering claim, real user-interaction result, or air-gapped target-device
+certification.

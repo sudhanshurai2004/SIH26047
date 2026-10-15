@@ -26,9 +26,10 @@ runtime dependencies. The shipped doctrine is a generic placeholder only.
 Read [`docs/READINESS.md`](docs/READINESS.md) for command-backed evidence and
 an honest done/partial/missing matrix. Read
 [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) before making a presentation
-claim. In particular, Godot runtime/rendering/FPS have **not been verified** in
-this environment; use [`docs/GODOT_CHECKLIST.md`](docs/GODOT_CHECKLIST.md) on
-the actual target laptop.
+claim. A pinned Godot 4.5.1 CI headless smoke has verified project import, 2D
+load, seeded playback seek, and local outbox persistence; interaction, visual
+rendering, and FPS remain **not verified** on an actual target laptop. Use
+[`docs/GODOT_CHECKLIST.md`](docs/GODOT_CHECKLIST.md).
 
 ## Prerequisites
 

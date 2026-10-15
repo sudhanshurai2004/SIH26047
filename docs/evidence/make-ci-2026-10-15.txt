@@ -36,7 +36,7 @@ tests/test_replay.py ..                                                  [100%]
     _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-======================= 111 passed, 1 warning in 19.23s ========================
+======================= 111 passed, 1 warning in 19.11s ========================
 PYTHONPATH=. ".venv/bin/python" scripts/self_test.py
 {"rating_eligible": true, "scenario_id": "scenario-4f38d04fd72b2af0", "score": 100.0, "status": "ok"}
 PYTHONPATH=. ".venv/bin/python" scripts/demo_smoke.py
@@ -60,4 +60,4 @@ computing gzip size...
 dist/index.html                   0.46 kB │ gzip:  0.30 kB
 dist/assets/index-DsoXJVMQ.css    5.36 kB │ gzip:  1.91 kB
 dist/assets/index-BO8luYNH.js   158.74 kB │ gzip: 50.52 kB
-✓ built in 835ms
+✓ built in 811ms

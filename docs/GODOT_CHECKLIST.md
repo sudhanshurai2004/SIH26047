@@ -1,11 +1,16 @@
 # Godot/laptop validation checklist
 
-**Status:** not verified in this repository environment. On 2026-10-15,
-`command -v godot4` and `command -v godot` found no Godot 4 executable, so no
-Godot scene, interaction, rendering path, or FPS result is claimed here.
+**Status:** local target-laptop validation is not verified in this repository
+environment. On 2026-10-15, `command -v godot4` and `command -v godot` found no
+local executable. Separately, GitHub Actions run `38745535797` passed a pinned
+Godot 4.5.1 **headless CI** smoke: project import, 2D scene load, seeded seek,
+and one local outbox event. Its actual logs are committed at
+`docs/evidence/godot-*-ci.log`.
 
-Use this checklist on the actual demonstration laptop before claiming native
-client readiness or performance.
+That CI result does not establish user interaction, visible rendering, 3D
+behavior, startup time, or FPS on a target laptop. Use this checklist on the
+actual demonstration laptop before claiming native client readiness or
+performance.
 
 ## Before the run
 
