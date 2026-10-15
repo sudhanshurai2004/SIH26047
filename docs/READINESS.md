@@ -55,7 +55,8 @@ doctrine migration.
 
 ```text
 $ PYTHONPATH=. .venv/bin/python -m pytest tests/golden/test_production_v1_golden.py -q
-11 passed in 0.35s
+...........                                                              [100%]
+11 passed in 0.29s
 ```
 
 That result specifically covers G1–G9 adapter/reference equivalence plus the
@@ -82,17 +83,95 @@ suite result appears below.
 
 ## Fresh-clone evidence
 
-A fresh-clone verification is recorded after the final branch push. It runs the
-README’s setup, self-test, CI, API-health, and dashboard-build/start steps from
-a new directory and records exact command output/fixes here.
+On 2026-10-15, the pushed branch commit `16ac81c` was freshly cloned from GitHub
+into `/tmp/SIH26047-release-clean` with:
+
+```text
+$ git clone --branch arena/14719d8a-sih26047 --single-branch \
+  https://github.com/sudhanshurai2004/SIH26047.git /tmp/SIH26047-release-clean
+HEAD=16ac81c
+tracked_files=126
+```
+
+The README workflow then succeeded in that new directory:
+
+```text
+$ make setup
+Successfully installed ... fastapi-0.115.12 ... pytest-8.3.5 ... uvicorn-0.34.2
+added 73 packages, and audited 74 packages in 1s
+found 0 vulnerabilities
+
+$ make self-test
+{"rating_eligible": true, "scenario_id": "scenario-4f38d04fd72b2af0", "score": 100.0, "status": "ok"}
+
+$ make ci
+All checks passed!
+50 files already formatted
+collected 89 items
+89 passed, 1 warning in 16.81s
+{"rating_eligible": true, "scenario_id": "scenario-4f38d04fd72b2af0", "score": 100.0, "status": "ok"}
+vite ... built in 870ms
+```
+
+`make dev` started FastAPI on `:8000` and Vite on `:5173`; direct local checks
+returned:
+
+```text
+API health: {"status":"ok","stage":"8","offline_only":true}
+API OpenAPI HTTP: 200
+Dashboard HTTP/title: <title>SIH 26247 Offline Trainer</title>
+```
+
+`make package` also succeeded in the fresh clone, producing its folder/archive.
+Running its copied `api/serve_local.py` with the fresh clone’s pinned virtual
+environment returned a dashboard HTTP 200 and:
+
+```text
+packaged API health: {"status":"ok","stage":"8","offline_only":true}
+```
+
+**Fresh-clone outcome:** no setup, self-test, CI, API, dashboard, or package
+failure occurred, so no fresh-clone code fix was required. This is a Linux
+source/pinned-environment check—not a Windows, air-gapped, Godot, or target
+hardware validation.
 
 ## Quality, dependency, and hygiene evidence
 
-The final commands and output are recorded after the final full run:
+Executed on 2026-10-15:
 
 ```text
-npm --prefix dashboard audit --audit-level=high
-.venv/bin/python -m pip check
+$ make ci
+All checks passed!
+50 files already formatted
+89 passed, 1 warning in 17.21s
+{"rating_eligible": true, "scenario_id": "scenario-4f38d04fd72b2af0", "score": 100.0, "status": "ok"}
+vite ... built in 805ms
+
+$ make golden-test
+collected 31 items
+31 passed in 0.34s
+
+$ npm --prefix dashboard audit --audit-level=high
+found 0 vulnerabilities
+
+$ .venv/bin/python -m pip check
+No broken requirements found.
+
+$ [lock-file scan]
+agpl_or_ultralytics_lock_hits=none
+
+$ printf '%s\n' data/demo.sqlite3 .env .env.local secrets/real-doctrine.yaml device-private.key certificate.pem | git check-ignore -v --stdin
+.gitignore:12:data/  data/demo.sqlite3
+.gitignore:17:.env  .env
+.gitignore:18:.env.*  .env.local
+.gitignore:24:secrets/  secrets/real-doctrine.yaml
+.gitignore:21:*.key  device-private.key
+.gitignore:20:*.pem  certificate.pem
+$ git ls-files 'data/*' '*.sqlite3' '.env' '.env.*' 'secrets/*' | wc -l
+0
+$ [basic marker scan]
+private_key_markers=0
+aws_access_key_markers=0
 ```
 
 The audited source uses the MIT repository `LICENSE`; `CREDITS.md` inventories
