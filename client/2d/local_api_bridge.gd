@@ -26,7 +26,7 @@ func load_session() -> void:
     if error != OK:
         request.queue_free()
         return
-    var result := await request.request_completed
+    var result: Array = await request.request_completed
     request.queue_free()
     if int(result[1]) < 200 or int(result[1]) >= 300:
         return
@@ -71,7 +71,7 @@ func complete_session() -> void:
         request.queue_free()
         session_completion_finished.emit(false, "Could not contact local API")
         return
-    var result := await request.request_completed
+    var result: Array = await request.request_completed
     request.queue_free()
     var success := int(result[1]) >= 200 and int(result[1]) < 300
     session_completion_finished.emit(success, result[3].get_string_from_utf8())
@@ -106,7 +106,7 @@ func sync_event(event: Dictionary) -> void:
         event_sync_finished.emit(str(event.get("event_id", "")), false, "Could not contact local API")
         _emit_outbox_result_if_ready()
         return
-    var result := await request.request_completed
+    var result: Array = await request.request_completed
     request.queue_free()
     _pending_syncs -= 1
     var response_code: int = result[1]
