@@ -66,8 +66,12 @@ jobs:
       - name: Load 2D scene, seek seeded playback, and check event outbox
         run: |
           set -euo pipefail
-          .tools/godot/Godot_v4.5.1-stable_linux.x86_64 --headless --path client \
-            --script res://tests/headless_smoke.gd 2>&1 | tee godot-headless.log
+          if ! .tools/godot/Godot_v4.5.1-stable_linux.x86_64 --headless --path client \
+            --script res://tests/headless_smoke.gd 2>&1 | tee godot-headless.log; then
+            tail_text="$(tail -n 50 godot-headless.log | tr '\n' ' ')"
+            echo "::error title=Godot smoke output::${tail_text}"
+            exit 1
+          fi
           grep --fixed-strings "GODOT_SMOKE_OK:" godot-headless.log
 
       - name: Upload native Godot logs
