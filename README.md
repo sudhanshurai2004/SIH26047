@@ -91,6 +91,10 @@ published rehearsal credentials—not defaults or production secrets. Remove the
 demo SQLite database after rehearsal. Exact session UUIDs, roles, AAR flow, and
 the higher-difficulty second session are in [`docs/DEMO.md`](docs/DEMO.md).
 
+For an automated API-backed rehearsal of that flow, run `make demo-smoke`.
+It saves no database, uses a temporary disposable seed, and explicitly does not
+claim native Godot interaction/rendering/FPS.
+
 For a Godot-backed local session, open `client/project.godot`, configure
 `LocalApiBridge` with the trainee ID/PIN/session UUID, then use the 2D scene.
 The native runtime must be checked on the target laptop before a live claim;
@@ -99,8 +103,13 @@ otherwise use the documented dashboard/API fallback.
 ## Verification
 
 ```bash
-# Proposed G1–G10 reference suite plus G1–G9 adapter calls into real v1 scoring.
+# Proposed G1–G10 regression suite. Native v2 fixtures call production scoring
+# directly; frozen-v1 adapter coverage remains separate for compatibility.
 make golden-test
+
+# Build a target-specific local Python wheelhouse, then prove clean --no-index install.
+make wheelhouse
+make offline-wheelhouse-test
 
 # Dependency checks.
 npm --prefix dashboard audit --audit-level=high
@@ -122,16 +131,18 @@ This creates `out/SIH26247-offline-trainer/` and a matching `.tar.gz`, containin
 an API copy, production-built dashboard, Godot project, contracts, generic
 doctrine, `launch.sh`, and `launch.bat`. The launchers serve dashboard and API
 from one `127.0.0.1` origin. They do **not** bundle a Python interpreter,
-wheelhouse, Godot binary/export, or real doctrine; prepare a vetted local Python
-environment before an air-gapped deployment. The folder’s
-`INSTALL_OFFLINE.txt` describes the boundary.
+wheelhouse, Godot binary/export, or real doctrine; prepare a vetted target-local
+Python environment/wheelhouse before an air-gapped deployment. Build and test
+that wheelhouse with `make wheelhouse && make offline-wheelhouse-test`; see
+[`docs/WHEELHOUSE.md`](docs/WHEELHOUSE.md). The folder’s `INSTALL_OFFLINE.txt`
+describes the boundary.
 
 ## Safety, contracts, and local data
 
 | Item | Location |
 | --- | --- |
-| Frozen v1 scenario/event/doctrine schemas | [`contracts/`](contracts/) |
-| Generic placeholder doctrine | [`doctrine/generic_demo.yaml`](doctrine/generic_demo.yaml) |
+| Frozen v1 + additive native v2 schemas/migration | [`contracts/`](contracts/) and [`scripts/migrate_v1_to_v2.py`](scripts/migrate_v1_to_v2.py) |
+| Generic placeholder doctrines | [`doctrine/generic_demo.yaml`](doctrine/generic_demo.yaml) and [`doctrine/generic_demo_v2.yaml`](doctrine/generic_demo_v2.yaml) |
 | Three demo snapshots | [`demo/scenarios/`](demo/scenarios/) |
 | Safety/release limitations | [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) |
 | Licensing and dependency inventory | [`LICENSE`](LICENSE), [`docs/CREDITS.md`](docs/CREDITS.md) |
@@ -140,7 +151,10 @@ YAML is loaded with `safe_load`, then schema/semantic validation. User data is
 stored through SQLAlchemy/SQLite; PINs are salted PBKDF2 hashes. Events are
 idempotent by ID, conflicting reuse is rejected, and interrupted sessions are
 excluded from ratings. Detection delay uses each target’s precomputed
-`t_visible_ms`, never scenario start time.
+`t_visible_ms`, never scenario start time. V1 assignment novelty includes a
+local deterministic last-five semantic Jaccard check plus exact-fingerprint
+rejection; the Blueprint's metric/N/threshold were not found, so the local
+policy is documented rather than presented as canonical.
 
 The `.gitignore` excludes SQLite data, backups, local environment files, and
 credential material. Do not commit a real PIN, approved doctrine, operational
@@ -149,7 +163,7 @@ data, or generated local database.
 ## Repository map
 
 ```text
-contracts/      Frozen v1 JSON contracts and samples
+contracts/      Frozen v1 and additive v2 JSON contracts, samples, digests
 core/           Generator, sensors, sessions, scoring, adaptive, replay, API
 demo/           Seeded, synthetic training-only demo snapshots
 client/         Godot 2D/replay/optional-3D source

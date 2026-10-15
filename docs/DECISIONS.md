@@ -211,3 +211,52 @@ laptop.
 **Consequence:** The launcher and app are offline at runtime, while clean-laptop
 binary portability remains a user validation item rather than an unsupported
 claim.
+
+## D-016 — Additive native contract-v2 scoring boundary (2026-10-15)
+
+**Context:** The frozen v1 contracts cannot represent a class-wise response
+matrix, outer/inner response zones, critical engagement/miss penalties, a
+friendly cap, or a per-target session aggregate. The hand-authored proposed
+G1–G10 pack exercises those concepts but is not recovered Blueprint doctrine.
+
+**Decision:** Keep every v1 schema and v1 scoring path intact. Add separately
+named v2 scenario/event/doctrine schemas selected only by
+`contract_version: "2.0"`, an explicit additive v1-to-v2 migration, and a
+native v2 production scorer/session path. The migrated generic doctrine remains
+training-only; it uses zero new penalties and a max-score cap so migration does
+not invent punitive doctrine. Native v2 G1–G10 fixtures are explicitly proposed
+training-only test data, not canonical Blueprint scores or real doctrine.
+
+**Consequence:** The proposed matrix/zone/penalty/cap/mean semantics execute
+without a v1 sidecar for v2 payloads, while deployed v1 payloads retain their
+frozen interpretation.
+
+## D-017 — Semantic novelty metric is a documented local policy (2026-10-15)
+
+**Context:** The Execution Blueprint requires rejection when a scenario feature
+signature is too similar to a trainee's last N scenarios. Its accessible text
+does **not** define the feature signature, metric, N, or threshold: **not
+found**.
+
+**Decision:** Use an explicit deterministic local policy rather than claim a
+Blueprint-prescribed metric: a last-five-session window, order-free feature
+tokens for profile/environment/target composition/visibility bands/coarse
+motion, and Jaccard similarity rejection at `>= 0.85`. Persisted assignment
+sequence—not a wall clock—defines “last.” Exact v1 fingerprint rejection across
+history remains as a stricter separate guard.
+
+**Consequence:** Near clones are rejected and materially distinct generated
+scenarios can pass. The policy is configurable/tested but requires later
+calibration or replacement if an approved metric is supplied.
+
+## D-018 — Offline wheelhouse scope and evidence (2026-10-15)
+
+**Decision:** Provide a reproducible wheelhouse builder and a clean virtualenv
+install test that sets `--no-index` and accepts only the supplied wheelhouse.
+Keep generated third-party wheels out of Git; commit only the commands and
+actual small-text evidence.
+
+**Consequence:** The 2026-10-15 Linux CPython 3.11 run resolved all 28 locked
+development wheels and passed offline install/import. Native Linux wheels are
+not treated as Windows/macOS artifacts; target-specific wheelhouse and
+air-gapped package validation remain required.

@@ -10,15 +10,17 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, sessionmaker
 
-from core.contracts import ContractValidationError, validate_payload
+from core.contracts import ContractValidationError, validate_versioned_payload
 from core.db.models import Role, SessionStatus, TraineeEventRecord, TrainingSessionRecord, User
 from core.db.security import AuthorizationError, hash_pin, require_role, verify_pin
 from core.generator import (
+    DEFAULT_SEMANTIC_NOVELTY_POLICY,
     GENERATOR_V1_VERSION,
     ScenarioValidationError,
+    most_similar_recent_scenario,
     scenario_fingerprint,
     validate_playback_scenario,
 )
@@ -155,12 +157,21 @@ class SessionManager:
             if db.get(TrainingSessionRecord, session_id) is not None:
                 raise SessionManagerError("session_id already exists")
             _reject_seen_v1_fingerprint(db, trainee_id=trainee_id, scenario=scenario)
+            _reject_semantically_similar_recent_v1_scenario(
+                db,
+                trainee_id=trainee_id,
+                scenario=scenario,
+            )
+            assignment_sequence = (
+                int(db.scalar(select(func.max(TrainingSessionRecord.assignment_sequence))) or 0) + 1
+            )
             db.add(
                 TrainingSessionRecord(
                     session_id=session_id,
                     scenario_id=str(scenario["scenario_id"]),
                     trainee_id=trainee_id,
                     scenario_json=canonical_json(scenario),
+                    assignment_sequence=assignment_sequence,
                     selection_mode=selection_mode,
                     status=SessionStatus.ACTIVE.value,
                     rating_eligible=True,
@@ -172,7 +183,7 @@ class SessionManager:
     def ingest_event(self, *, actor_id: str, event: Mapping[str, Any]) -> EventIngestResult:
         """Validate and persist one trainee event with event-id idempotency."""
         try:
-            validate_payload("event", event)
+            validate_versioned_payload("event", event)
         except ContractValidationError as error:
             raise SessionManagerError(str(error)) from error
 
@@ -205,6 +216,10 @@ class SessionManager:
                 raise SessionManagerError("event scenario_id does not match the session scenario")
 
             scenario = json.loads(training_session.scenario_json)
+            if event["contract_version"] != scenario["contract_version"]:
+                raise SessionManagerError(
+                    "event contract_version does not match the session scenario"
+                )
             _validate_event_against_scenario(event, scenario)
             duplicate_sequence = db.scalar(
                 select(TraineeEventRecord).where(
@@ -447,6 +462,36 @@ def _reject_seen_v1_fingerprint(
             raise SessionManagerError(
                 "V1 scenario repeats a prior structural fingerprint for this trainee"
             )
+
+
+def _reject_semantically_similar_recent_v1_scenario(
+    db: Session,
+    *,
+    trainee_id: str,
+    scenario: Mapping[str, Any],
+) -> None:
+    """Apply the explicit local feature-signature rule to a trainee's last N.
+
+    The query orders by persisted assignment sequence rather than wall-clock
+    time. This fulfills a bounded recent-history policy deterministically even
+    when the local machine clock is unavailable or incorrect.
+    """
+    if scenario.get("generator_version") != GENERATOR_V1_VERSION:
+        return
+    recent_records = db.scalars(
+        select(TrainingSessionRecord.scenario_json)
+        .where(TrainingSessionRecord.trainee_id == trainee_id)
+        .order_by(TrainingSessionRecord.assignment_sequence.desc())
+        .limit(DEFAULT_SEMANTIC_NOVELTY_POLICY.recent_session_count)
+    )
+    recent_scenarios = [json.loads(scenario_json) for scenario_json in recent_records]
+    similarity = most_similar_recent_scenario(scenario, recent_scenarios)
+    if similarity is not None and similarity >= DEFAULT_SEMANTIC_NOVELTY_POLICY.maximum_similarity:
+        raise SessionManagerError(
+            "V1 scenario is semantically too similar to one of the trainee's "
+            f"last {DEFAULT_SEMANTIC_NOVELTY_POLICY.recent_session_count} scenarios "
+            f"(Jaccard similarity {similarity:.3f})"
+        )
 
 
 def _validate_event_against_scenario(event: Mapping[str, Any], scenario: Mapping[str, Any]) -> None:

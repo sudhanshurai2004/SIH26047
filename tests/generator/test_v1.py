@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
+
 import numpy as np
 import pytest
 
@@ -10,7 +12,10 @@ from core.generator import (
     ScenarioV1Profile,
     canonical_scenario_v1_bytes,
     generate_scenario_v1,
+    is_semantically_novel_scenario,
     scenario_fingerprint,
+    scenario_semantic_signature,
+    semantic_similarity,
     validate_scenario_v1,
 )
 from core.sensors import SensorModel
@@ -60,6 +65,24 @@ def test_v1_novelty_check_rejects_an_existing_fingerprint() -> None:
 
     with pytest.raises(ScenarioV1Error, match="novelty"):
         generate_scenario_v1(19, PROFILE, seen_fingerprints=[scenario_fingerprint(scenario)])
+
+
+def test_v1_semantic_novelty_rejects_a_near_duplicate_but_allows_a_distinct_seed() -> None:
+    scenario = generate_scenario_v1(19, PROFILE)
+    near_duplicate = deepcopy(scenario)
+    near_duplicate["scenario_id"] = "scenario-v1-semantic-near-duplicate"
+    near_duplicate["targets"][0]["trajectory"][1]["x_m"] += 0.001
+    validate_scenario_v1(near_duplicate)
+
+    assert scenario_fingerprint(near_duplicate) != scenario_fingerprint(scenario)
+    assert scenario_semantic_signature(near_duplicate) == scenario_semantic_signature(scenario)
+    assert semantic_similarity(near_duplicate, scenario) == 1.0
+    assert not is_semantically_novel_scenario(near_duplicate, [scenario])
+    with pytest.raises(ScenarioV1Error, match="semantic novelty"):
+        generate_scenario_v1(19, PROFILE, recent_scenarios=[scenario])
+
+    distinct = generate_scenario_v1(20, PROFILE)
+    assert is_semantically_novel_scenario(distinct, [scenario])
 
 
 def test_v1_does_not_mutate_numpy_global_rng_state() -> None:

@@ -25,6 +25,22 @@ seed a production/default account.
 These are public rehearsal credentials only. Delete the demo SQLite file before
 any non-demo use.
 
+## Automated rehearsal evidence
+
+Run the API-backed, disposable version of the complete scripted flow with:
+
+```bash
+make demo-smoke
+```
+
+It seeds the three ready sessions, checks health and both local roles, lists the
+generic doctrine, records/ingests abstract event sequences for the scripted and
+night/rain sessions, completes and scores them, reads a replay frame, and checks
+unit trends/summary. Its actual 2026-10-15 output is saved at
+[`evidence/demo-smoke-2026-10-15.txt`](evidence/demo-smoke-2026-10-15.txt).
+It deliberately does **not** run native Godot interaction, rendering, or FPS;
+the live-client step below remains conditional on target-laptop validation.
+
 ## Ready sessions
 
 | Session | Snapshot | Seed | Difficulty | UUID |
@@ -63,8 +79,10 @@ For a distinct adaptive practice session after the ready pack, sign in as the
 instructor, change the dashboard seed to `2624704`, choose **Create adaptive
 demo**, complete it as the trainee, then score it. If a same-trainee V1
 fingerprint is reused, the service rejects it; choose a new deliberate seed.
-This demonstrates the implemented exact-repeat novelty guard, not a claim of a
-semantic last-N similarity metric.
+This demonstrates the deterministic semantic last-five novelty guard plus the
+stricter exact-fingerprint guard. The local Jaccard feature metric and its
+`0.85` threshold are documented policy, not claimed Blueprint-prescribed values
+(the Blueprint metric/N/threshold were not found).
 
 ## Reset after rehearsal
 

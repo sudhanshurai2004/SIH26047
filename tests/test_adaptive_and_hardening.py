@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from copy import deepcopy
 from pathlib import Path
 from uuid import NAMESPACE_URL, uuid5
 
@@ -232,7 +233,7 @@ def test_database_initialization_adds_later_columns_to_a_stage2_database(tmp_pat
         column["name"] for column in inspect(engine).get_columns("training_sessions")
     }
     user_columns = {column["name"] for column in inspect(engine).get_columns("users")}
-    assert {"selection_mode", "rating_applied"}.issubset(session_columns)
+    assert {"assignment_sequence", "selection_mode", "rating_applied"}.issubset(session_columns)
     assert "unit_id" in user_columns
 
 
@@ -281,6 +282,58 @@ def test_v1_novelty_rejects_a_repeat_for_same_trainee_but_not_other_trainees(
         session_id="93939393-9393-4393-8393-939393939393",
         trainee_id="trainee-002",
         scenario=scenario,
+        selection_mode="adaptive",
+    )
+
+
+def test_v1_semantic_novelty_checks_only_the_persisted_last_n_sessions(tmp_path: Path) -> None:
+    manager, _, _ = _service(tmp_path)
+    profile = ScenarioV1Profile(
+        "semantic-window",
+        2,
+        ("detection",),
+        swarm_size=3,
+        clutter_count=1,
+    )
+    oldest = generate_scenario_v1(91, profile)
+    manager.create_training_session(
+        actor_id="instructor-001",
+        session_id="91919191-9191-4191-8191-919191919191",
+        trainee_id="trainee-001",
+        scenario=oldest,
+        selection_mode="adaptive",
+    )
+
+    recent_clone = deepcopy(oldest)
+    recent_clone["scenario_id"] = "scenario-v1-semantic-recent-clone"
+    recent_clone["targets"][0]["trajectory"][1]["x_m"] += 0.001
+    with pytest.raises(SessionManagerError, match="semantically too similar"):
+        manager.create_training_session(
+            actor_id="instructor-001",
+            session_id="92929292-9292-4292-8292-929292929292",
+            trainee_id="trainee-001",
+            scenario=recent_clone,
+            selection_mode="adaptive",
+        )
+
+    for offset, seed in enumerate(range(92, 97), start=3):
+        manager.create_training_session(
+            actor_id="instructor-001",
+            session_id=f"{offset}{offset}{offset}{offset}{offset}{offset}{offset}{offset}-"
+            f"{offset}{offset}{offset}{offset}-4{offset}{offset}{offset}-8{offset}{offset}{offset}-"
+            f"{offset:012d}",
+            trainee_id="trainee-001",
+            scenario=generate_scenario_v1(seed, profile),
+            selection_mode="adaptive",
+        )
+
+    # It is a semantic clone of the oldest record, but it falls outside the
+    # deterministic last-five window and is not an exact fingerprint repeat.
+    manager.create_training_session(
+        actor_id="instructor-001",
+        session_id="98989898-9898-4898-8898-989898989898",
+        trainee_id="trainee-001",
+        scenario=recent_clone,
         selection_mode="adaptive",
     )
 

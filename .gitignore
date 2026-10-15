@@ -12,6 +12,7 @@ __pycache__/
 data/
 backups/
 out/
+wheelhouse/
 
 # Local credentials and operator material (never commit real PINs or operational doctrine)
 .env

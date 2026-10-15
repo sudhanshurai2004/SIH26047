@@ -10,6 +10,11 @@ from typing import Any
 
 import numpy as np
 
+from core.generator.novelty import (
+    DEFAULT_SEMANTIC_NOVELTY_POLICY,
+    SemanticNoveltyPolicy,
+    is_semantically_novel_scenario,
+)
 from core.generator.validation import ScenarioValidationError, validate_playback_scenario
 from core.sensors import SensorConfig, SensorModel, SensorTrace
 from core.serialization import canonical_json, canonical_json_bytes
@@ -67,18 +72,24 @@ def generate_scenario_v1(
     *,
     version: str = GENERATOR_V1_VERSION,
     seen_fingerprints: Iterable[str] = (),
+    recent_scenarios: Iterable[Mapping[str, Any]] = (),
+    semantic_novelty_policy: SemanticNoveltyPolicy = DEFAULT_SEMANTIC_NOVELTY_POLICY,
 ) -> dict[str, Any]:
     """Generate a deterministic generic swarm/clutter scenario.
 
     Contract payloads remain limited to frozen V1-compatible fields. Sensor
     traces stay outside the payload; only their precomputed first-visible time
-    is persisted on each target for deterministic scoring.
+    is persisted on each target for deterministic scoring. ``recent_scenarios``
+    is an ordered, caller-owned last-N window for the explicit local semantic
+    novelty policy; no clock or global random state is read.
     """
     return generate_scenario_v1_bundle(
         seed,
         profile,
         version=version,
         seen_fingerprints=seen_fingerprints,
+        recent_scenarios=recent_scenarios,
+        semantic_novelty_policy=semantic_novelty_policy,
     ).scenario
 
 
@@ -88,6 +99,8 @@ def generate_scenario_v1_bundle(
     *,
     version: str = GENERATOR_V1_VERSION,
     seen_fingerprints: Iterable[str] = (),
+    recent_scenarios: Iterable[Mapping[str, Any]] = (),
+    semantic_novelty_policy: SemanticNoveltyPolicy = DEFAULT_SEMANTIC_NOVELTY_POLICY,
 ) -> ScenarioV1Bundle:
     """Generate a V1 payload and its deterministic abstract sensor traces."""
     if not isinstance(seed, int) or isinstance(seed, bool) or seed < 0:
@@ -146,6 +159,14 @@ def generate_scenario_v1_bundle(
     fingerprint = scenario_fingerprint(scenario)
     if fingerprint in set(seen_fingerprints):
         raise ScenarioV1Error("scenario fails novelty check against supplied fingerprints")
+    if not is_semantically_novel_scenario(
+        scenario,
+        recent_scenarios,
+        policy=semantic_novelty_policy,
+    ):
+        raise ScenarioV1Error(
+            "scenario fails semantic novelty check against supplied recent scenarios"
+        )
     return ScenarioV1Bundle(scenario=scenario, sensor_traces=traces)
 
 

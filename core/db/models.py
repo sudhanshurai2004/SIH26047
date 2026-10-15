@@ -50,6 +50,7 @@ class TrainingSessionRecord(Base):
         ForeignKey("users.user_id", ondelete="RESTRICT"), nullable=False
     )
     scenario_json: Mapped[str] = mapped_column(Text, nullable=False)
+    assignment_sequence: Mapped[int] = mapped_column(Integer, nullable=False, default=0, index=True)
     selection_mode: Mapped[str] = mapped_column(String(16), nullable=False, default="fixed")
     status: Mapped[str] = mapped_column(String(16), nullable=False)
     rating_eligible: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)

@@ -3,195 +3,136 @@
 **Scope:** offline, local, training-only software. This is not a weapon,
 targeting, operational-doctrine, real-sensor, or real-EW product. The governing
 source is [`docs/input/SIH 26247 Execution Blueprint.md`](input/SIH%2026247%20Execution%20Blueprint.md).
-The historical `SIH26047` technical alias is intentional and explained in
-[`DECISIONS.md`](DECISIONS.md#d-011--blueprint-source-and-corrected-problem-identifier-2026-10-15).
+`SIH26047` is a retained technical repository/package alias; the human-facing
+problem identifier is 26247.
 
-## Requirement matrix
+## Evidence policy
 
-Status meanings: **Done** has automated/command evidence for the described
-scope; **Partial** has a real implementation but a stated validation or
-functional gap; **Missing** has no implementation. Counts are over the seven
-briefed outcome rows, not a claim that every Blueprint target is complete.
+**Done** means the stated repository-scope behavior has an executed command or
+automated test. **Partial** means code exists but a stated validation, product,
+or target-environment boundary remains. The statuses do not claim every
+Blueprint target is complete, and no performance number is reported unless
+actually measured.
 
-| Outcome | Status | Shipped evidence | Executed evidence | Honest boundary / next evidence needed |
+| Outcome | Status | Shipped implementation | Executed evidence | Honest boundary |
 | --- | --- | --- | --- | --- |
-| Desktop simulator | Partial | `client/2d/`, `client/scenes3d/`, local bridge/outbox, dashboard | Static client tests are included in the full suite. | Godot was unavailable here; native execution, interaction, rendering, startup, and FPS are **not verified**. Follow `GODOT_CHECKLIST.md`. |
-| Scripted and procedural scenarios | Done | `demo/scenarios/01-*` static scripted snapshot; V0/V1 seeded generators; `scripts/seed_demo.py` | Contract/generator/demo asset tests in full suite; demo seed command creates three sessions. | Synthetic training data only; no real threat data. |
-| Environment and swarm variants | Partial | V1 boid-style swarm/clutter generation; rural/urban, day/night/rain fields; synthetic sensor `t_visible_ms`; ready swarm/night snapshots | V1 tests and demo asset test in full suite. | Core generation is verified; native visual presentation and any realism/performance assertion are not. |
-| Decision-tree scoring | Done | Frozen doctrine schema, safe YAML validation, generic placeholder, per-node AAR, real-v1 G1–G9 adapter | Production-Golden command passes 11 tests; full engine/API tests pass. | Placeholder doctrine is not approved operational doctrine; proposed sidecar policy is not native v1 doctrine. |
-| Individual, unit, repeated-session AAR | Partial | SQLite scores/replay, Elo records, unit IDs, role-scoped unit summary API/dashboard | Session/API/unit-summary tests in full suite; dashboard production build passes. | Browser/native UI interaction and real repeated trainee data are not manually validated; no pilot claims. |
-| Difficulty and randomisation | Partial | Seeded NumPy V1 generator, difficulty profiles, adaptive selector, fresh-seed UI, exact V1 fingerprint repeat rejection | Generator/adaptive/novelty tests in full suite. | Repeat guard is exact structural matching across history, not the Blueprint’s semantic “similar last N” metric; no pilot calibration. |
-| Offline minimal-hardware unit use | Partial | SQLite, relative API UI, local package folder, one-origin launcher, `.bat`/`.sh`, generic no-cloud runtime | Packaged localhost root/API smoke test succeeds; clean-clone build/test evidence below. | No clean target-laptop, air-gapped wheelhouse, Godot export, or hardware/FPS measurement has been performed. |
+| Desktop simulator | Partial | Godot 2D default scene, optional 3D scene, durable event outbox, local dashboard | Static client assertions are part of `make ci` (111 tests). A pinned headless Godot CI job is configured. | Local Godot runtime was unavailable; native CI result, user interaction, visual rendering, startup time, and FPS are not yet verified at this revision. |
+| Scripted and procedural scenarios | Done | Scripted snapshots; deterministic V0/V1 NumPy generators; demo seeder | `make ci` ran seeded self-test and the disposable three-session demo smoke. | Synthetic training data only; no real threat data. |
+| Environment and swarm variants | Partial | V1 swarm/clutter, environment fields, synthetic `t_visible_ms`, night/rain snapshot | Generator/demo asset tests passed in `make ci`. | Core data is verified; native visual presentation, realism, and performance are not. |
+| Decision-tree scoring | Done | Frozen v1 scoring plus additive native v2 response-matrix/zone/critical/cap/aggregate scoring, per-node AAR | `make golden-test`: 44 passed, including 13 native-v2 production tests. | Both generic doctrines and proposed fixtures are training-only; no approved operational doctrine is supplied. |
+| Individual, unit, repeated-session AAR | Partial | SQLite scores/replay, role/unit-scoped summaries, skill records | `make demo-smoke` recorded, scored, replayed, and summarized two disposable sessions. | Browser/native UI interaction and real trainee/pilot data are not manually validated. |
+| Difficulty and randomisation | Done | Seeded V1 generator, adaptive selector, exact fingerprints, semantic last-five novelty guard | Generator/session tests in `make ci` reject a near duplicate, permit a distinct seed, and prove the last-five window. | Blueprint feature signature/metric/N/threshold are **not found**; Jaccard `>= 0.85`, N=5 is documented local policy, not approved calibration. |
+| Offline minimal-hardware unit use | Partial | SQLite, relative API UI, source package, `launch.sh`/`launch.bat`, wheelhouse tooling | Linux wheelhouse built 28 wheels and clean `--no-index` install passed; packaged Linux launcher returned dashboard/API HTTP 200. A Windows CI smoke is configured. | No target-laptop, Windows CI result, packaged air-gapped target run, Godot export, or hardware/FPS test is yet verified at this revision. |
 
-**Matrix count: 2 Done / 5 Partial / 0 Missing.** Partial does not mean safe
-to silently promote a claim; see [`LIMITATIONS.md`](LIMITATIONS.md).
+**Matrix count: 3 Done / 4 Partial / 0 Missing.** A Partial row must not be
+silently presented as Done.
 
-## Proposed G1–G10 production bridge
+## Native v2 contracts and G1–G10 execution
 
-The proposed hand-authored pack is not canonical Blueprint data or doctrine.
-Frozen v1 schemas were not changed to accept its compact objects. Instead,
-`core/scoring/golden_v1_adapter.py` creates nested valid scenario/doctrine and
-lowercase versioned event payloads, then calls real `score_scenario()` once per
-target.
+V1 schemas remain frozen and are checked against their recorded digests. V2 is
+an additive family selected only by `contract_version: "2.0"`; it adds:
 
-| Proposed behavior | Production v1 path exercised | Result / boundary |
-| --- | --- | --- |
-| G1–G4 normal/benign/friendly behavior | schema validation; v1 tree detect/classify/respond scoring | Executed by adapter tests; aggregate policy remains sidecar where needed. |
-| G5 timing | `t_visible_ms` to real detection-delay node calculation | Tested: production node observes `12_000` ms from visibility, not scenario start. |
-| G6 swarm member aggregation | one valid v1 production score per translated target | Per-target production scoring is exercised; pack aggregate mean is adapter sidecar. |
-| G7 no action / critical miss | v1 timeout path | Timeout is native; inner-zone critical penalty is sidecar because v1 lacks zones. |
-| G8 duplicate batch | `score_scenario()` canonical identical-event-ID deduplication | Native production hardening: identical retry scores once; changed-content reuse raises `ScoringError`. |
-| G9 interrupted session | production `interrupted=True` rating eligibility | Native report is scoreable and `rating_eligible=false`; proposed aggregate remains sidecar. |
-| G10 invalid doctrine upload | validated doctrine repository/API keeps prior valid record | Covered by hardening/API test; intentionally no scoreable event scenario exists. |
+- class-wise outer/inner response matrices and class partial credit;
+- synthetic per-target zone/inner-reach metadata;
+- critical engagement and hostile-inner-zone-miss penalties;
+- friendly cap and `mean_per_target` session aggregation; and
+- explicit scenario/event/doctrine v1-to-v2 migration.
 
-**Non-expressible in frozen v1:** the proposed class-specific response matrix,
-outer/inner zones, protected-zone behavior, critical engagement/miss penalties,
-friendly cap, aggregate mean, and proposed source retry count. The adapter
-implements them visibly as test sidecar logic; production v1 does **not** claim
-to implement them. A future approved requirement needs a versioned contract and
-doctrine migration.
+The proposed G1–G10 payloads at `tests/golden/golden_cases_v2.yaml` are static
+native v2 inputs. `tests/golden/test_production_v2_golden.py` calls production
+`score_scenario()` directly—there is no scoring sidecar. It covers G1–G9 score
+outputs, G5 visibility-relative delay, G8 duplicate-ID ignore, G9 interruption
+eligibility, native session persistence, and G10 invalid-doctrine retention.
+They remain proposed training-only test data, not recovered Blueprint claims.
 
-### Golden evidence
+Executed proof is retained as small-text evidence:
 
-```text
-$ PYTHONPATH=. .venv/bin/python -m pytest tests/golden/test_production_v1_golden.py -q
-...........                                                              [100%]
-11 passed in 0.29s
-```
+- [`evidence/frozen-v1-contracts-2026-10-15.txt`](evidence/frozen-v1-contracts-2026-10-15.txt)
+  — all three frozen v1 schema digests passed.
+- [`evidence/v1-to-v2-migration-2026-10-15.txt`](evidence/v1-to-v2-migration-2026-10-15.txt)
+  — scenario, event, and doctrine migration command completed.
+- [`evidence/golden-test-2026-10-15.txt`](evidence/golden-test-2026-10-15.txt)
+  — `44 passed in 1.47s`.
 
-That result specifically covers G1–G9 adapter/reference equivalence plus the
-G5 visibility and G8 duplicate production assertions. The latest complete
-suite result appears below.
+## Automated demo flow
 
-## Packaging, demo, and local controls
+`scripts/demo_smoke.py` automates the API-backed portions of
+[`DEMO.md`](DEMO.md): it creates a temporary seeded database, validates health
+and local roles, lists the generic doctrine, records abstract events, completes
+and scores the scripted and night/rain sessions, reads a replay frame, and
+checks unit trends/summary. Actual output is at
+[`evidence/demo-smoke-2026-10-15.txt`](evidence/demo-smoke-2026-10-15.txt).
+It expressly does not execute native Godot interaction/rendering/FPS.
 
-- `make package` runs `scripts/package_offline.sh`, producing
-  `out/SIH26247-offline-trainer/`, its `.tar.gz`, `api/`, built `dashboard/`,
-  `godot/`, `launch.sh`, and `launch.bat`.
-- A package smoke run served `/` and `/api/health` from `127.0.0.1:8766`; both
-  returned HTTP 200. In the fresh package, an explicit temporary `.venv`
-  symlink to the fresh clone’s pinned environment represented the documented
-  preinstalled dependency prerequisite; then `./launch.sh` printed
-  `SIH 26247 offline trainer: http://127.0.0.1:8000` and served both dashboard
-  root and API health with HTTP 200. This verifies the Linux/macOS shell
-  launcher and local one-origin wiring—not a Windows `.bat` run, air-gapped
-  dependency installation, Godot export, or target hardware.
-- `make demo-seed` creates an ignored disposable database with one scripted,
-  one swarm, and one night/rain higher-difficulty session. It uses public demo
-  credentials only and refuses a non-empty database unless `--reset` is explicit.
-  See `DEMO.md`.
-- Users have salted PBKDF2 PINs; event retries are idempotent; conflicting IDs
-  are rejected; interrupted sessions are rating-ineligible; ORM queries and role
-  checks are used; instructors are scoped to their unit. The dashboard starts
-  with blank credentials.
+## Wheelhouse and package evidence
 
-## Fresh-clone evidence
+The ignored `wheelhouse/` is built by `scripts/build_wheelhouse.py`; the clean
+install verifier sets `PIP_NO_INDEX=1` and runs pip with `--no-index` and only
+that directory. Actual Linux CPython-3.11 outputs show 28 wheels and a clean
+import/check at:
 
-On 2026-10-15, the pushed branch commit `16ac81c` was freshly cloned from GitHub
-into `/tmp/SIH26047-release-clean` with:
+- [`evidence/wheelhouse-build-2026-10-15.txt`](evidence/wheelhouse-build-2026-10-15.txt)
+- [`evidence/offline-wheelhouse-2026-10-15.txt`](evidence/offline-wheelhouse-2026-10-15.txt)
 
-```text
-$ git clone --branch arena/14719d8a-sih26047 --single-branch \
-  https://github.com/sudhanshurai2004/SIH26047.git /tmp/SIH26047-release-clean
-HEAD=16ac81c
-tracked_files=126
-```
+No locked dependency failed to resolve in that Linux run. `PyYAML`,
+`SQLAlchemy`, `numpy`, `pydantic_core`, `rpds-py`, and `ruff` are ABI/platform
+wheels from that run and cannot be reused as Windows/macOS target artifacts;
+see [`WHEELHOUSE.md`](WHEELHOUSE.md).
 
-The README workflow then succeeded in that new directory:
+`make package` produced the source package/archive, and the packaged Linux
+launcher—with a package-local link to the already pinned local virtual
+environment, as the package documentation requires—served both `/api/health`
+and dashboard root with HTTP 200. Actual output is at
+[`evidence/package-2026-10-15.txt`](evidence/package-2026-10-15.txt) and
+[`evidence/package-launch-linux-2026-10-15.txt`](evidence/package-launch-linux-2026-10-15.txt).
+This does not verify Windows or an air-gapped target laptop.
 
-```text
-$ make setup
-Successfully installed ... fastapi-0.115.12 ... pytest-8.3.5 ... uvicorn-0.34.2
-added 73 packages, and audited 74 packages in 1s
-found 0 vulnerabilities
+## Current local verification
 
-$ make self-test
-{"rating_eligible": true, "scenario_id": "scenario-4f38d04fd72b2af0", "score": 100.0, "status": "ok"}
-
-$ make ci
-All checks passed!
-50 files already formatted
-collected 89 items
-89 passed, 1 warning in 16.81s
-{"rating_eligible": true, "scenario_id": "scenario-4f38d04fd72b2af0", "score": 100.0, "status": "ok"}
-vite ... built in 870ms
-```
-
-`make dev` started FastAPI on `:8000` and Vite on `:5173`; direct local checks
-returned:
-
-```text
-API health: {"status":"ok","stage":"8","offline_only":true}
-API OpenAPI HTTP: 200
-Dashboard HTTP/title: <title>SIH 26247 Offline Trainer</title>
-```
-
-`make package` also succeeded in the fresh clone, producing its folder/archive.
-Running its copied `api/serve_local.py` with the fresh clone’s pinned virtual
-environment returned a dashboard HTTP 200 and:
-
-```text
-packaged API health: {"status":"ok","stage":"8","offline_only":true}
-```
-
-**Fresh-clone outcome:** no setup, self-test, CI, API, dashboard, or package
-failure occurred, so no fresh-clone code fix was required. This is a Linux
-source/pinned-environment check—not a Windows, air-gapped, Godot, or target
-hardware validation.
-
-## Quality, dependency, and hygiene evidence
-
-Executed on 2026-10-15:
+[`evidence/make-ci-2026-10-15.txt`](evidence/make-ci-2026-10-15.txt) records:
 
 ```text
 $ make ci
 All checks passed!
-50 files already formatted
-89 passed, 1 warning in 17.21s
+59 files already formatted
+111 passed, 1 warning in 19.23s
 {"rating_eligible": true, "scenario_id": "scenario-4f38d04fd72b2af0", "score": 100.0, "status": "ok"}
-vite ... built in 805ms
-
-$ make golden-test
-collected 31 items
-31 passed in 0.34s
-
-$ npm --prefix dashboard audit --audit-level=high
-found 0 vulnerabilities
-
-$ .venv/bin/python -m pip check
-No broken requirements found.
-
-$ [lock-file scan]
-agpl_or_ultralytics_lock_hits=none
-
-$ printf '%s\n' data/demo.sqlite3 .env .env.local secrets/real-doctrine.yaml device-private.key certificate.pem | git check-ignore -v --stdin
-.gitignore:12:data/  data/demo.sqlite3
-.gitignore:17:.env  .env
-.gitignore:18:.env.*  .env.local
-.gitignore:24:secrets/  secrets/real-doctrine.yaml
-.gitignore:21:*.key  device-private.key
-.gitignore:20:*.pem  certificate.pem
-$ git ls-files 'data/*' '*.sqlite3' '.env' '.env.*' 'secrets/*' | wc -l
-0
-$ [basic marker scan]
-private_key_markers=0
-aws_access_key_markers=0
+DEMO_SMOKE_OK: ...
+vite ... built in 835ms
 ```
 
-The audited source uses the MIT repository `LICENSE`; `CREDITS.md` inventories
-pinned dependencies and records that no AGPL/Ultralytics dependency is declared.
-`.gitignore` excludes SQLite/runtime data, local environment files, key/cert
-patterns, and `secrets/`. The public demo PIN is source-visible by design but is
-created only by an explicit disposable seeder, never by normal startup.
+The one warning is Starlette's dependency deprecation warning for
+`anyio.abc.BlockingPortal`; it did not fail the suite. `make ci` also ran the
+API-backed demo smoke and production dashboard build.
 
-## Remaining user actions before any real use
+## GitHub Actions coverage (configured; result pending this revision)
 
-1. Validate Godot 4 client interaction, 2D/3D rendering, startup, and FPS on
-the actual intended laptop using `GODOT_CHECKLIST.md`; preserve recordings.
-2. Obtain and approve real doctrine/cue policy through the responsible authority;
-do not substitute the generic placeholder.
-3. Prepare a vetted Python wheelhouse/environment and test the packaged folder
-on the actual air-gapped Windows/Linux/macOS target; make no portability claim
-until then.
-4. Run pilot/rehearsal sessions with consent and keep real evidence separate
-from the disposable demo data. Do not claim training transfer without it.
+`.github/workflows/ci.yml` adds three release checks beyond the Linux suite:
+
+1. **Godot 4 native smoke:** downloads official `4.5.1-stable` Linux x86_64
+   binary, verifies SHA-256
+   `02ec53d1cc7dbb9cc6355393c61b9ab43d1244751a124f10248a4802830788cd`,
+   imports the project, loads the 2D scene, seeks seeded playback, and checks a
+   durable event-outbox record. It uploads logs regardless of outcome.
+2. **Offline wheelhouse:** builds the lockfile wheelhouse, then clean-installs
+   it with no index.
+3. **Windows launcher smoke:** runs `scripts/setup_windows.ps1`, packages the
+   source, starts `launch.bat`, and requires HTTP 200 from both dashboard root
+   and `/api/health`.
+
+These jobs are configuration, not evidence of success until their resulting CI
+run is green. If the Godot job succeeds, its actual logs will be committed here
+as evidence; no FPS number is collected or claimed by that headless smoke.
+
+## Remaining user/target-laptop work before any real use
+
+1. Run the actual target-laptop checklist for native Godot interactions, 2D/3D
+   rendering, startup, and FPS; any FPS result must say **CI runner, software
+   rendering, not target laptop** if it comes from CI, or name the actual laptop
+   if locally measured.
+2. Obtain/approve real doctrine and cue policy through the responsible authority;
+   do not substitute the generic placeholder.
+3. Build a target-specific wheelhouse and run the packaged folder without
+   internet on the intended Windows/Linux/macOS laptop.
+4. Conduct consented pilot/rehearsal sessions; do not claim learner transfer,
+   adaptive benefit, or operational utility without recorded evidence.

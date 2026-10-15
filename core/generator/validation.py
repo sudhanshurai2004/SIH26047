@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from math import isfinite
 from typing import Any
 
-from core.contracts import ContractValidationError, validate_payload
+from core.contracts import ContractValidationError, validate_versioned_payload
 
 
 class ScenarioValidationError(ValueError):
@@ -22,7 +22,7 @@ def validate_playback_scenario(scenario: Mapping[str, Any]) -> None:
     onset. Version-specific generators add their own solvability checks.
     """
     try:
-        validate_payload("scenario", scenario)
+        validate_versioned_payload("scenario", scenario)
     except ContractValidationError as error:
         raise ScenarioValidationError(str(error)) from error
 

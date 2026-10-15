@@ -60,6 +60,21 @@ def initialize_database(engine: Engine) -> None:
                     "TEXT NOT NULL DEFAULT 'fixed'"
                 )
             )
+        if "assignment_sequence" not in existing_session_columns:
+            connection.execute(
+                text(
+                    "ALTER TABLE training_sessions ADD COLUMN assignment_sequence "
+                    "INTEGER NOT NULL DEFAULT 0"
+                )
+            )
+            # SQLite rowid preserves local insertion order for pre-existing
+            # records. New assignments receive an explicit monotonic sequence.
+            connection.execute(
+                text(
+                    "UPDATE training_sessions SET assignment_sequence = rowid "
+                    "WHERE assignment_sequence = 0"
+                )
+            )
         if "rating_applied" not in existing_session_columns:
             connection.execute(
                 text(

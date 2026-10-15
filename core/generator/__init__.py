@@ -1,5 +1,13 @@
 """Deterministic scenario generator modules."""
 
+from core.generator.novelty import (
+    DEFAULT_SEMANTIC_NOVELTY_POLICY,
+    SemanticNoveltyPolicy,
+    is_semantically_novel_scenario,
+    most_similar_recent_scenario,
+    scenario_semantic_signature,
+    semantic_similarity,
+)
 from core.generator.v0 import (
     GENERATOR_VERSION,
     ScenarioGenerationError,
@@ -24,8 +32,10 @@ from core.generator.v1 import (
 from core.generator.validation import ScenarioValidationError, validate_playback_scenario
 
 __all__ = [
+    "DEFAULT_SEMANTIC_NOVELTY_POLICY",
     "GENERATOR_VERSION",
     "GENERATOR_V1_VERSION",
+    "SemanticNoveltyPolicy",
     "ScenarioGenerationError",
     "ScenarioProfile",
     "ScenarioV1Bundle",
@@ -38,8 +48,12 @@ __all__ = [
     "generate_scenario_v1",
     "generate_scenario_v1_bundle",
     "is_novel_scenario",
+    "is_semantically_novel_scenario",
     "is_solvable",
+    "most_similar_recent_scenario",
     "scenario_fingerprint",
+    "scenario_semantic_signature",
+    "semantic_similarity",
     "validate_playback_scenario",
     "validate_scenario",
     "validate_scenario_v1",

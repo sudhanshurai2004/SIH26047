@@ -27,7 +27,13 @@ distribution, retain the original notices shipped by each package.
 
 | Tool | Version | Licence |
 | --- | ---: | --- |
-| Godot Engine | 4.x (optional local client runtime) | MIT |
+| Godot Engine | 4.5.1-stable (pinned official CI smoke binary; optional local runtime) | MIT |
+
+The CI workflow downloads the official Godot 4.5.1-stable Linux x86_64 release
+asset and verifies SHA-256
+`02ec53d1cc7dbb9cc6355393c61b9ab43d1244751a124f10248a4802830788cd`
+before the headless smoke. This pin identifies the test binary; it is not a
+claim of target-laptop rendering or FPS verification.
 
 ## Python packages
 

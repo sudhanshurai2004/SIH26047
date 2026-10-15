@@ -21,16 +21,18 @@ mkdir -p "${PACKAGE_DIR}/api" "${PACKAGE_DIR}/dashboard" "${PACKAGE_DIR}/godot" 
 # API source, frozen contracts, generic placeholder doctrine, and exact runtime
 # pins are kept together so the folder has no dependency on the source checkout.
 cp -R core contracts doctrine demo "${PACKAGE_DIR}/api/"
-cp requirements.lock requirements.in pyproject.toml "${PACKAGE_DIR}/api/"
+cp requirements.lock requirements-dev.lock requirements.in pyproject.toml "${PACKAGE_DIR}/api/"
 mkdir -p "${PACKAGE_DIR}/api/scripts"
 cp scripts/serve_local.py "${PACKAGE_DIR}/api/serve_local.py"
-cp scripts/seed_demo.py "${PACKAGE_DIR}/api/scripts/seed_demo.py"
+cp scripts/seed_demo.py scripts/build_wheelhouse.py scripts/migrate_v1_to_v2.py \
+  scripts/test_offline_wheelhouse.py "${PACKAGE_DIR}/api/scripts/"
 find "${PACKAGE_DIR}/api" -type d -name __pycache__ -prune -exec rm -rf {} +
 find "${PACKAGE_DIR}/api" -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete
 cp -R dashboard/dist/. "${PACKAGE_DIR}/dashboard/"
 cp -R client/. "${PACKAGE_DIR}/godot/"
 cp README.md LICENSE "${PACKAGE_DIR}/"
-cp docs/CREDITS.md docs/DEMO.md docs/GODOT_CHECKLIST.md docs/LIMITATIONS.md "${PACKAGE_DIR}/docs/"
+cp docs/CREDITS.md docs/DEMO.md docs/GODOT_CHECKLIST.md docs/LIMITATIONS.md docs/WHEELHOUSE.md \
+  "${PACKAGE_DIR}/docs/"
 
 cat > "${PACKAGE_DIR}/launch.sh" <<'SH'
 #!/usr/bin/env bash
@@ -87,7 +89,9 @@ Runtime requirement
 Use a Python 3.11 environment that already has the exact packages in
 api/requirements.lock installed. For a fully air-gapped laptop, prepare that
 virtual environment from a vetted local wheelhouse before copying this folder;
-the launcher performs no download and the app makes no outbound request.
+the launcher performs no download and the app makes no outbound request. The
+source checkout's build_wheelhouse.py/test_offline_wheelhouse.py tooling is also
+copied under api/scripts for target-specific preparation.
 
 Start
 -----
