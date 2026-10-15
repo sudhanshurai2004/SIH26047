@@ -68,10 +68,14 @@ suite result appears below.
 - `make package` runs `scripts/package_offline.sh`, producing
   `out/SIH26247-offline-trainer/`, its `.tar.gz`, `api/`, built `dashboard/`,
   `godot/`, `launch.sh`, and `launch.bat`.
-- A package smoke run served `/` and `/api/health` from `127.0.0.1:8765`; both
-  returned HTTP 200. This verifies local one-origin static/API wiring, not a
-  Windows run, air-gapped dependency installation, Godot export, or target
-  hardware.
+- A package smoke run served `/` and `/api/health` from `127.0.0.1:8766`; both
+  returned HTTP 200. In the fresh package, an explicit temporary `.venv`
+  symlink to the fresh clone’s pinned environment represented the documented
+  preinstalled dependency prerequisite; then `./launch.sh` printed
+  `SIH 26247 offline trainer: http://127.0.0.1:8000` and served both dashboard
+  root and API health with HTTP 200. This verifies the Linux/macOS shell
+  launcher and local one-origin wiring—not a Windows `.bat` run, air-gapped
+  dependency installation, Godot export, or target hardware.
 - `make demo-seed` creates an ignored disposable database with one scripted,
   one swarm, and one night/rain higher-difficulty session. It uses public demo
   credentials only and refuses a non-empty database unless `--reset` is explicit.
