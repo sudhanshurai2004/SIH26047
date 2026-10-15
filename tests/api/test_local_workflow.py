@@ -56,6 +56,7 @@ def test_local_seed_to_scored_session_workflow(tmp_path: Path) -> None:
     instructor = _headers("instructor-001", "2345")
     assert client.get("/api/units/other-unit/summary", headers=instructor).status_code == 403
     assert client.get("/api/ratings/trainee-002", headers=instructor).status_code == 403
+    assert client.get("/api/ratings/not-yet-created", headers=instructor).json() == {}
     scenario_response = client.post(
         "/api/scenarios/v0",
         headers=instructor,

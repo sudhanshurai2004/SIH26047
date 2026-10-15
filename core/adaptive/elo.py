@@ -106,8 +106,12 @@ class SkillModel:
             )
             if actor.role == Role.TRAINEE.value and actor.user_id != trainee_id:
                 raise AuthorizationError("trainees may only read their own ratings")
+            # An unknown ID has no rating rows. Preserve the dashboard-friendly
+            # empty result while still preventing an instructor from probing a
+            # known trainee assigned to another local unit.
             if actor.role in {Role.INSTRUCTOR.value, Role.ADMIN.value}:
-                _require_staff_unit_access(db, actor, trainee_id)
+                if db.get(User, trainee_id) is not None:
+                    _require_staff_unit_access(db, actor, trainee_id)
             rows = db.scalars(
                 select(SkillRatingRecord)
                 .where(SkillRatingRecord.trainee_id == trainee_id)
