@@ -1,0 +1,13 @@
+Godot Engine v4.5.1.stable.official.f62fdbde1 - https://godotengine.org
+
+SCRIPT ERROR: Invalid access to property or key 'target-01' on a base object of type 'Dictionary'.
+          at: _on_frame_changed (res://2d/main_2d.gd:77)
+          GDScript backtrace (most recent call first):
+              [0] _on_frame_changed (res://2d/main_2d.gd:77)
+              [1] _emit_frame (res://2d/scenario_player.gd:55)
+              [2] load_scenario (res://2d/scenario_player.gd:17)
+              [3] _load_scenario (res://2d/main_2d.gd:55)
+              [4] _load_bundled_scenario (res://2d/main_2d.gd:40)
+              [5] _ready (res://2d/main_2d.gd:27)
+              [6] _run (res://tests/headless_smoke.gd:13)
+GODOT_SMOKE_OK: imported project, loaded 2D scene, sought seeded playback, persisted event outbox
