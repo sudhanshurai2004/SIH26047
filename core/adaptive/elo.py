@@ -55,7 +55,8 @@ class SkillModel:
         if not report.rating_eligible:
             return ()
         with self._session_factory.begin() as db:
-            require_role(db.get(User, actor_id), [Role.INSTRUCTOR, Role.ADMIN])
+            actor = require_role(db.get(User, actor_id), [Role.INSTRUCTOR, Role.ADMIN])
+            _require_staff_unit_access(db, actor, trainee_id)
             return _apply_report_in_transaction(
                 db,
                 trainee_id=trainee_id,
@@ -79,10 +80,11 @@ class SkillModel:
         if not report.rating_eligible:
             return ()
         with self._session_factory.begin() as db:
-            require_role(db.get(User, actor_id), [Role.INSTRUCTOR, Role.ADMIN])
+            actor = require_role(db.get(User, actor_id), [Role.INSTRUCTOR, Role.ADMIN])
             training_session = db.get(TrainingSessionRecord, session_id)
             if training_session is None:
                 raise ValueError("session does not exist")
+            _require_staff_unit_access(db, actor, training_session.trainee_id)
             if not training_session.rating_eligible or training_session.rating_applied:
                 return ()
             if training_session.score_json is None:
@@ -104,6 +106,8 @@ class SkillModel:
             )
             if actor.role == Role.TRAINEE.value and actor.user_id != trainee_id:
                 raise AuthorizationError("trainees may only read their own ratings")
+            if actor.role in {Role.INSTRUCTOR.value, Role.ADMIN.value}:
+                _require_staff_unit_access(db, actor, trainee_id)
             rows = db.scalars(
                 select(SkillRatingRecord)
                 .where(SkillRatingRecord.trainee_id == trainee_id)
@@ -188,3 +192,14 @@ def _difficulty_rating(difficulty: int) -> float:
 
 def _expected_score(rating: float, scenario_rating: float) -> float:
     return 1.0 / (1.0 + pow(10.0, (scenario_rating - rating) / 400.0))
+
+
+def _require_staff_unit_access(db: Session, actor: User, trainee_id: str) -> None:
+    """Allow admins globally and instructors only inside their persisted unit."""
+    if actor.role == Role.ADMIN.value:
+        return
+    trainee = db.get(User, trainee_id)
+    if trainee is None or trainee.role != Role.TRAINEE.value:
+        raise AuthorizationError("skill ratings require a trainee")
+    if actor.role == Role.INSTRUCTOR.value and actor.unit_id != trainee.unit_id:
+        raise AuthorizationError("instructors may only access trainees in their own unit")

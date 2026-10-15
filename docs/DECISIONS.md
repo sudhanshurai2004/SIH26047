@@ -140,3 +140,74 @@ claims about unavailable Blueprint numbers or real doctrine. The generic
 placeholder remains labelled as such. If a later Blueprint requires these
 semantics in the production contract, introduce a versioned contract/doctrine
 migration instead of silently widening v1.
+
+## D-011 — Blueprint source and corrected problem identifier (2026-10-15)
+
+**Context:** The governing execution blueprint is now available as
+`docs/input/SIH 26247 Execution Blueprint.md`. It identifies the project as SIH
+2026 PS **26247**. Earlier decisions D-004/D-006 accurately describe the state
+when the source was absent, but are superseded for new work by this available
+copy.
+
+**Decision:** Use `26247` in human-facing title, safety, readiness, demo, and
+release documentation. Retain existing `SIH26047` repository, package, database
+environment-variable, and API-title identifiers only as intentional legacy
+technical names: they are part of the checkout and changing them would break
+paths, packaging, and existing local data without improving requirement
+coverage.
+
+**Consequence:** Human-facing material calls out the correct problem number;
+`SIH26047` aliases are documented rather than silently treated as a different
+problem.
+
+## D-012 — Frozen-v1 Golden adapter boundary (2026-10-15)
+
+**Decision:** Translate proposed G1–G9 targets/events into schema-valid nested
+contract-v1 payloads and call production `score_scenario()` for every target.
+Keep non-expressible proposed rules in a named adapter sidecar: class-specific
+response matrices, outer/inner zones, critical engagement/miss penalties,
+friendly-score cap, aggregate per-target mean, and the pack's source retry
+count. Production now natively deduplicates identical `event_id` retries and
+rejects changed-content reuse, so G8 reaches the real scorer safely. G10 stays
+at the validated-doctrine repository/API boundary because it intentionally has
+no scoreable event scenario.
+
+**Consequence:** The adapter is evidence of contract translation and production
+execution, not a claim that generic v1 doctrine implements the proposed or real
+operational rules. See `docs/READINESS.md` for the case mapping.
+
+## D-013 — Deterministic novelty and unit scoping (2026-10-15)
+
+**Decision:** The session service rejects an exact V1 structural fingerprint
+already assigned to the same trainee, without using wall-clock timestamps or
+global randomness. A fixed scenario may still be assigned to another trainee
+for a fair unit comparison. Instructors are restricted to their persisted
+`unit_id` for unit summary, sessions, and ratings; admins retain local
+cross-unit oversight.
+
+**Consequence:** This is an exact-repeat guard, not the Blueprint's future
+semantic “similar last N” metric. It is labelled partial rather than overstated
+as a full similarity system.
+
+## D-014 — Disposable published demo credentials (2026-10-15)
+
+**Decision:** There is no production default account or PIN. `scripts/seed_demo.py`
+creates an explicitly disposable, separate demo database only on an empty path
+(or after explicit `--reset`), with documented credentials for rehearsal.
+The dashboard starts with blank login fields.
+
+**Consequence:** Demo PINs are public and must never be used for real trainees;
+delete the seeded demo database before operational use.
+
+## D-015 — Local source-package launch boundary (2026-10-15)
+
+**Decision:** `scripts/package_offline.sh` produces a copied folder containing
+the API, production-built dashboard, Godot project, frozen contracts, generic
+placeholder doctrine, and Windows/Linux/macOS launchers. It does not bundle a
+Python interpreter, native dependency environment, or Godot export; a vetted
+preinstalled Python environment/local wheelhouse is required for an air-gapped
+laptop.
+
+**Consequence:** The launcher and app are offline at runtime, while clean-laptop
+binary portability remains a user validation item rather than an unsupported
+claim.

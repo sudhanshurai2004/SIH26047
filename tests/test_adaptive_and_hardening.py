@@ -9,7 +9,13 @@ from uuid import NAMESPACE_URL, uuid5
 import pytest
 from sqlalchemy import inspect
 
-from core.adaptive import ScenarioOption, SkillModel, select_next_scenario, unit_trends
+from core.adaptive import (
+    ScenarioOption,
+    SkillModel,
+    select_next_scenario,
+    unit_summary,
+    unit_trends,
+)
 from core.db import (
     AuthorizationError,
     Role,
@@ -18,9 +24,14 @@ from core.db import (
     create_sqlite_engine,
     initialize_database,
 )
-from core.generator import ScenarioProfile, generate_scenario
+from core.generator import (
+    ScenarioProfile,
+    ScenarioV1Profile,
+    generate_scenario,
+    generate_scenario_v1,
+)
 from core.scoring import DoctrineRepository, DoctrineValidationError, load_doctrine, score_scenario
-from core.sessions import SessionManager
+from core.sessions import SessionManager, SessionManagerError
 
 DOCTRINE_PATH = Path(__file__).resolve().parents[1] / "doctrine" / "generic_demo.yaml"
 
@@ -217,8 +228,12 @@ def test_database_initialization_adds_later_columns_to_a_stage2_database(tmp_pat
     engine = create_sqlite_engine(database_path)
     initialize_database(engine)
 
-    columns = {column["name"] for column in inspect(engine).get_columns("training_sessions")}
-    assert {"selection_mode", "rating_applied"}.issubset(columns)
+    session_columns = {
+        column["name"] for column in inspect(engine).get_columns("training_sessions")
+    }
+    user_columns = {column["name"] for column in inspect(engine).get_columns("users")}
+    assert {"selection_mode", "rating_applied"}.issubset(session_columns)
+    assert "unit_id" in user_columns
 
 
 def test_backup_uses_controlled_local_destination(tmp_path: Path) -> None:
@@ -228,6 +243,46 @@ def test_backup_uses_controlled_local_destination(tmp_path: Path) -> None:
 
     assert backup_path.is_file()
     assert backup_path.parent == tmp_path / "backups"
+
+
+def test_v1_novelty_rejects_a_repeat_for_same_trainee_but_not_other_trainees(
+    tmp_path: Path,
+) -> None:
+    manager, _, _ = _service(tmp_path)
+    manager.create_user(
+        actor_id="admin-001",
+        user_id="trainee-002",
+        role=Role.TRAINEE,
+        pin="4567",
+    )
+    scenario = generate_scenario_v1(
+        91,
+        ScenarioV1Profile("novelty-session", 2, ("detection",), swarm_size=3, clutter_count=1),
+    )
+    manager.create_training_session(
+        actor_id="instructor-001",
+        session_id="91919191-9191-4191-8191-919191919191",
+        trainee_id="trainee-001",
+        scenario=scenario,
+        selection_mode="adaptive",
+    )
+
+    with pytest.raises(SessionManagerError, match="fingerprint"):
+        manager.create_training_session(
+            actor_id="instructor-001",
+            session_id="92929292-9292-4292-8292-929292929292",
+            trainee_id="trainee-001",
+            scenario=scenario,
+            selection_mode="adaptive",
+        )
+
+    manager.create_training_session(
+        actor_id="instructor-001",
+        session_id="93939393-9393-4393-8393-939393939393",
+        trainee_id="trainee-002",
+        scenario=scenario,
+        selection_mode="adaptive",
+    )
 
 
 def test_unit_trends_returns_only_real_scored_sessions(tmp_path: Path) -> None:
@@ -252,3 +307,12 @@ def test_unit_trends_returns_only_real_scored_sessions(tmp_path: Path) -> None:
 
     assert trends[0].selection_mode == "adaptive"
     assert trends[0].completed_sessions == 1
+
+    summary = unit_summary(
+        session_factory=factory,
+        actor_id="instructor-001",
+        unit_id="local-unit",
+    )
+    assert summary.unit_id == "local-unit"
+    assert summary.trainees[0].trainee_id == "trainee-001"
+    assert summary.trainees[0].completed_sessions == 1

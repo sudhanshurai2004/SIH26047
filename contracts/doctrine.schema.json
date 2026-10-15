@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://sih26047.local/contracts/doctrine.schema.json",
-  "title": "SIH26047 Training Doctrine Contract",
+  "title": "SIH 26247 Training Doctrine Contract",
   "description": "Editable, abstract training scoring and decision-tree configuration. It must not encode real-world tactics, weapon control, targeting, or electronic-warfare techniques.",
   "type": "object",
   "additionalProperties": false,

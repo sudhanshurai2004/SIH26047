@@ -1,161 +1,162 @@
-# SIH26047 — Offline Threat Simulation Trainer
+# SIH 26247 — Offline Drone & Counter-Drone Threat Simulation Trainer
 
-> **Training software only.** This project simulates abstract trainee decisions
-> for Smart India Hackathon PS 26247. It provides no weapon control, targeting,
-> real doctrine, or real electronic-warfare interface.
+> **Training software only.** This repository simulates abstract trainee
+> decisions for Smart India Hackathon 2026 PS **26247**. It has no weapon
+> control, targeting, real doctrine, real sensor feed, or real
+> electronic-warfare interface.
 
-The trainer runs locally on one machine:
+`SIH26047` remains in the repository/package/environment-variable names as an
+intentional legacy technical identifier; the human-facing problem ID is 26247.
+See [`docs/DECISIONS.md`](docs/DECISIONS.md#d-011--blueprint-source-and-corrected-problem-identifier-2026-10-15).
 
-- a **Python core** for deterministic scenario generation, SQLite sessions,
-  validated doctrine scoring, replay, and adaptive skill selection;
-- a **Godot 4 client** for 2D-first playback and trainee-event recording; and
-- a **React dashboard** for login, local session review, replay, AAR, progress,
-  and unit trends.
+The local product consists of:
 
-No runtime endpoint uses cloud APIs, telemetry, paid services, or model
-downloads.
+- a **Python/FastAPI core** for deterministic generation, SQLite sessions,
+  validation, scoring, replay, and adaptive selection;
+- a **Godot 4 project** with a 2D-first playback/event-outbox client and an
+  optional 3D presentation; and
+- a **React dashboard** for local login, AAR, replay, ratings, doctrine upload,
+  and unit summaries.
 
-## Current implementation status
+There are no cloud API, telemetry, paid-service, model-download, or AGPL/YOLO
+runtime dependencies. The shipped doctrine is a generic placeholder only.
 
-The repository now includes the planned T1–T16 foundation and MVP-hardening
-components:
+## Status and boundaries
 
-- frozen v1 scenario/event/doctrine JSON Schemas and safe YAML validation;
-- deterministic generator V0 and generator V1 (swarms, abstract clutter,
-  environment variants, novelty checks, and seeded sensor visibility/noise/dropouts);
-- SQLite ORM users, salted PBKDF2 PINs, role checks, idempotent events,
-  interrupted-session exclusion, backup, and additive migration handling;
-- validated doctrine repository, decision-tree AAR scoring, per-skill Elo-style
-  ratings, weakness-targeted selection, deterministic replay, and unit trends;
-- local FastAPI routes plus the dashboard login/session/AAR/replay UI;
-- Godot 2D playback/event outbox/local API bridge and optional 3D presentation;
-- a headless self-test, source-package script, and real-session experiment scripts.
-
-The Execution Blueprint PDF is still unavailable in this workspace. A
-hand-authored **proposed** G1–G10 pack is preserved under
-[`tests/golden/`](tests/golden/) and its reference scorer plus the core
-compatibility evaluator agree within `0.01`. It is explicitly **not** claimed
-as recovered Blueprint data or real doctrine. Blueprint-only requirements and
-any hardware/performance target remain unmeasured. See
-[`docs/DECISIONS.md`](docs/DECISIONS.md).
+Read [`docs/READINESS.md`](docs/READINESS.md) for command-backed evidence and
+an honest done/partial/missing matrix. Read
+[`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) before making a presentation
+claim. In particular, Godot runtime/rendering/FPS have **not been verified** in
+this environment; use [`docs/GODOT_CHECKLIST.md`](docs/GODOT_CHECKLIST.md) on
+the actual target laptop.
 
 ## Prerequisites
 
 - Python **3.11**
 - Node.js **22** and npm **10**
 - Git
-- Godot **4.x** (optional for the native client)
+- Godot **4.x** only when validating/running the optional native client
 
-All Python/npm dependencies are pinned in committed lock files. Initial setup
-may access configured package registries; application runtime remains local.
+Python and npm dependencies are pinned in committed lock files. Initial setup
+may reach the configured package registries; application runtime uses only
+local files and localhost.
 
-## Quick start
+## Fresh local setup and self-test
 
 ```bash
-cd /home/user/SIH26047
+git clone https://github.com/sudhanshurai2004/SIH26047.git
+cd SIH26047
 make setup
 
-# Headless seed → event → score verification in a temporary SQLite database.
+# Deterministic headless seed → event → score check using a temporary SQLite DB.
 make self-test
 
-# Starts FastAPI on :8000 and the dashboard on :5173.
+# Full lint, formatting, Python/API/dashboard tests, self-test, and production dashboard build.
+make ci
+```
+
+Start the development API/dashboard pair:
+
+```bash
 make dev
 ```
 
-Open the dashboard at `http://localhost:5173`. On first run, enter a local admin
-ID and PIN and choose **First run: create local admin**. This creates only a
-local SQLite identity and seeds the generic placeholder doctrine.
+Open `http://localhost:5173`, then verify the API at
+`http://localhost:8000/api/health`. On an empty database, enter a chosen local
+admin ID and PIN and click **First run: create local admin**. The UI begins with
+blank credentials; it does not ship an application-startup default PIN.
 
-## Run a full local session
+The local API docs are at `http://localhost:8000/api/docs` while `make dev` is
+running. Browser code uses relative `/api` requests; Vite proxies them locally
+during development.
 
-The self-test verifies this headlessly. To use the desktop flow instead:
+## Disposable five-minute demo kit
 
-1. Start `make dev` and create a local admin in the dashboard.
-2. While signed in as that admin, use **Local administration → Create local
-   user** to create one instructor and one trainee (with different local PINs).
-3. Sign in as the instructor, enter the trainee ID and a deliberate seed, then
-   select **Create fixed demo** or **Create adaptive demo**. Copy the assigned
-   session UUID from the session list/API response.
-4. Open `client/project.godot` in Godot 4. Configure `LocalApiBridge` with the
-   trainee ID, PIN, and assigned session UUID. The 2D client loads the local
-   scenario, writes each abstract decision to its durable local outbox, retries
-   it idempotently, and can complete the session.
-5. Return to the instructor dashboard, refresh, select the completed session,
-   and choose **Score session**. The AAR, deterministic replay, rating updates,
-   and local trends become available there. Instructor tools also expose local
-   doctrine validation/upload; admins can make a controlled SQLite backup.
-
-For API-only deployments, the same role-protected routes are documented at
-`http://localhost:8000/api/docs` while `make dev` is running.
-
-The default `client/scenarios/pack-v0.json` also works with no API credentials;
-it writes event data only to the local Godot outbox.
-
-## Verification and packaging
+The repository includes three ready seeded scenarios: a scripted introduction,
+a rural/day swarm, and a higher-difficulty synthetic night/rain scenario.
+Create them only in a disposable demo database:
 
 ```bash
-# Tests, lint, formatting, self-test, and dashboard production build.
-make ci
+make demo-seed
+SIH26047_DB_PATH="$PWD/data/demo-trainer.sqlite3" make dev
+```
 
-# Run the supplied reference scorer and core-scoring G1–G10 compatibility tests.
+| User | PIN | Purpose |
+| --- | ---: | --- |
+| `demo-instructor` | `262471` | create/review/score local sessions |
+| `demo-trainee` | `262472` | play the ready sessions |
+
+`demo-admin` / `262470` also exists only in that disposable database. These are
+published rehearsal credentials—not defaults or production secrets. Remove the
+demo SQLite database after rehearsal. Exact session UUIDs, roles, AAR flow, and
+the higher-difficulty second session are in [`docs/DEMO.md`](docs/DEMO.md).
+
+For a Godot-backed local session, open `client/project.godot`, configure
+`LocalApiBridge` with the trainee ID/PIN/session UUID, then use the 2D scene.
+The native runtime must be checked on the target laptop before a live claim;
+otherwise use the documented dashboard/API fallback.
+
+## Verification
+
+```bash
+# Proposed G1–G10 reference suite plus G1–G9 adapter calls into real v1 scoring.
 make golden-test
 
-# Audit locked dashboard dependencies.
+# Dependency checks.
 npm --prefix dashboard audit --audit-level=high
+.venv/bin/python -m pip check
+```
 
-# Create a source archive from the committed revision in out/.
+The G1–G10 pack is a **proposed hand-authored reference specification**, not
+recovered real doctrine or canonical Blueprint data. The adapter preserves
+frozen contracts and documents rules that v1 cannot express; see
+[`docs/READINESS.md`](docs/READINESS.md#proposed-g1g10-production-bridge).
+
+## Offline local source package
+
+```bash
 make package
 ```
 
-GitHub Actions runs `make setup && make ci`.
+This creates `out/SIH26247-offline-trainer/` and a matching `.tar.gz`, containing
+an API copy, production-built dashboard, Godot project, contracts, generic
+doctrine, `launch.sh`, and `launch.bat`. The launchers serve dashboard and API
+from one `127.0.0.1` origin. They do **not** bundle a Python interpreter,
+wheelhouse, Godot binary/export, or real doctrine; prepare a vetted local Python
+environment before an air-gapped deployment. The folder’s
+`INSTALL_OFFLINE.txt` describes the boundary.
 
-## Contracts and safety
+## Safety, contracts, and local data
 
-| Contract | Purpose |
+| Item | Location |
 | --- | --- |
-| [`contracts/scenario.schema.json`](contracts/scenario.schema.json) | Versioned scenario trajectories and `t_visible_ms`. |
-| [`contracts/event.schema.json`](contracts/event.schema.json) | UUID-idempotent trainee actions at logical `t_offset_ms`. |
-| [`contracts/doctrine.schema.json`](contracts/doctrine.schema.json) | Editable abstract score weights, response bounds, and decision tree. |
+| Frozen v1 scenario/event/doctrine schemas | [`contracts/`](contracts/) |
+| Generic placeholder doctrine | [`doctrine/generic_demo.yaml`](doctrine/generic_demo.yaml) |
+| Three demo snapshots | [`demo/scenarios/`](demo/scenarios/) |
+| Safety/release limitations | [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) |
+| Licensing and dependency inventory | [`LICENSE`](LICENSE), [`docs/CREDITS.md`](docs/CREDITS.md) |
 
-Contract version `1.0` remains frozen. YAML is parsed only through
-`yaml.safe_load`, then schema and semantic validation. All user-controlled
-persistence queries use SQLAlchemy ORM parameters; static SQLite migration and
-foreign-key setup statements contain no user data.
+YAML is loaded with `safe_load`, then schema/semantic validation. User data is
+stored through SQLAlchemy/SQLite; PINs are salted PBKDF2 hashes. Events are
+idempotent by ID, conflicting reuse is rejected, and interrupted sessions are
+excluded from ratings. Detection delay uses each target’s precomputed
+`t_visible_ms`, never scenario start time.
 
-Detection delay is always calculated from `t_visible_ms`, not scenario start.
-Action weights and allowed abstract responses come from validated doctrine YAML.
-Interrupted sessions set `rating_eligible=false` and are ignored by the skill
-model.
+The `.gitignore` excludes SQLite data, backups, local environment files, and
+credential material. Do not commit a real PIN, approved doctrine, operational
+data, or generated local database.
 
-The shipped [`doctrine/generic_demo.yaml`](doctrine/generic_demo.yaml) is a
-clearly labelled generic placeholder—not real doctrine.
-
-## Repository layout
+## Repository map
 
 ```text
-contracts/      Frozen JSON contracts and valid/invalid samples
-core/           Generator, sensors, SQLite, sessions, scoring, adaptive, replay, API
-client/         Godot 2D, replay, bundled scenarios, and optional 3D view
-dashboard/      React + Vite + TypeScript local dashboard
-doctrine/       Validated generic placeholder doctrine
-experiments/    Real-session pilot analysis scripts
-docs/           Decisions and third-party credits
-tests/          Automated core, API, client-pack, and experiment tests
-scripts/        Dev, headless self-test, and source packaging helpers
+contracts/      Frozen v1 JSON contracts and samples
+core/           Generator, sensors, sessions, scoring, adaptive, replay, API
+demo/           Seeded, synthetic training-only demo snapshots
+client/         Godot 2D/replay/optional-3D source
+dashboard/      React + Vite + TypeScript local AAR dashboard
+doctrine/       Generic placeholder only
+experiments/    Scripts that require real recorded sessions
+docs/           Readiness, demo, limitations, decisions, credits
+tests/          Automated contract/core/API/client-pack checks
+scripts/        Setup helpers, demo seeder, self-test, package launcher builder
 ```
-
-## Backups and pilot scripts
-
-- An authenticated local admin can call `POST /api/backups` to make a controlled
-  SQLite backup under `data/backups/`.
-- See [`experiments/README.md`](experiments/README.md) for adaptive-vs-fixed,
-  unseen-seed, and rote-learning scripts. They read real local session rows and
-  fail rather than fabricate missing data.
-- See [`client/README.md`](client/README.md) for Godot setup and the optional
-  3D-view limitations.
-
-## Dependency credits
-
-Every resolved Python/npm dependency and its package licence is recorded in
-[`docs/CREDITS.md`](docs/CREDITS.md). Ultralytics YOLO and AGPL dependencies are
-not used.

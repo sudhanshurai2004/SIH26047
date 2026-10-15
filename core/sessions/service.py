@@ -16,11 +16,17 @@ from sqlalchemy.orm import Session, sessionmaker
 from core.contracts import ContractValidationError, validate_payload
 from core.db.models import Role, SessionStatus, TraineeEventRecord, TrainingSessionRecord, User
 from core.db.security import AuthorizationError, hash_pin, require_role, verify_pin
-from core.generator import ScenarioValidationError, validate_playback_scenario
+from core.generator import (
+    GENERATOR_V1_VERSION,
+    ScenarioValidationError,
+    scenario_fingerprint,
+    validate_playback_scenario,
+)
 from core.scoring import ScoreReport, load_doctrine, score_scenario, validate_doctrine
 from core.serialization import canonical_json
 
 USER_ID_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9_-]{2,63}$")
+UNIT_ID_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9_-]{2,63}$")
 
 
 class SessionManagerError(ValueError):
@@ -75,25 +81,42 @@ class SessionManager:
     def __init__(self, session_factory: sessionmaker[Session]) -> None:
         self._session_factory = session_factory
 
-    def create_bootstrap_admin(self, user_id: str, pin: str) -> None:
+    def create_bootstrap_admin(self, user_id: str, pin: str, unit_id: str = "local-unit") -> None:
         """Create the first admin only when the local user table is empty."""
         _validate_user_id(user_id)
+        _validate_unit_id(unit_id)
         with self._session_factory.begin() as db:
             has_users = db.scalar(select(User.user_id).limit(1)) is not None
             if has_users:
                 raise SessionManagerError(
                     "bootstrap admin may only be created in an empty database"
                 )
-            db.add(User(user_id=user_id, role=Role.ADMIN.value, pin_hash=hash_pin(pin)))
+            db.add(
+                User(
+                    user_id=user_id,
+                    role=Role.ADMIN.value,
+                    unit_id=unit_id,
+                    pin_hash=hash_pin(pin),
+                )
+            )
 
-    def create_user(self, *, actor_id: str, user_id: str, role: Role, pin: str) -> None:
+    def create_user(
+        self,
+        *,
+        actor_id: str,
+        user_id: str,
+        role: Role,
+        pin: str,
+        unit_id: str = "local-unit",
+    ) -> None:
         """Create a local user; only an admin may create identities."""
         _validate_user_id(user_id)
+        _validate_unit_id(unit_id)
         with self._session_factory.begin() as db:
             require_role(db.get(User, actor_id), [Role.ADMIN])
             if db.get(User, user_id) is not None:
                 raise SessionManagerError("user_id already exists")
-            db.add(User(user_id=user_id, role=role.value, pin_hash=hash_pin(pin)))
+            db.add(User(user_id=user_id, role=role.value, unit_id=unit_id, pin_hash=hash_pin(pin)))
 
     def authenticate_pin(self, user_id: str, pin: str) -> bool:
         """Verify a local PIN without exposing the stored hash."""
@@ -124,12 +147,14 @@ class SessionManager:
             raise SessionManagerError(str(error)) from error
 
         with self._session_factory.begin() as db:
-            require_role(db.get(User, actor_id), [Role.INSTRUCTOR, Role.ADMIN])
+            actor = require_role(db.get(User, actor_id), [Role.INSTRUCTOR, Role.ADMIN])
             trainee = db.get(User, trainee_id)
             if trainee is None or trainee.role != Role.TRAINEE.value:
                 raise SessionManagerError("trainee_id must identify a trainee")
+            _require_instructor_unit_access(actor, trainee)
             if db.get(TrainingSessionRecord, session_id) is not None:
                 raise SessionManagerError("session_id already exists")
+            _reject_seen_v1_fingerprint(db, trainee_id=trainee_id, scenario=scenario)
             db.add(
                 TrainingSessionRecord(
                     session_id=session_id,
@@ -216,7 +241,7 @@ class SessionManager:
         with self._session_factory.begin() as db:
             actor = _get_actor(db, actor_id)
             training_session = _get_session(db, session_id)
-            _require_session_access(actor, training_session, allow_trainee_owner=True)
+            _require_session_access(db, actor, training_session, allow_trainee_owner=True)
             if training_session.status == SessionStatus.INTERRUPTED.value:
                 raise SessionManagerError("interrupted sessions cannot be completed")
             if training_session.status == SessionStatus.COMPLETED.value:
@@ -242,6 +267,7 @@ class SessionManager:
             actor = _get_actor(db, actor_id)
             require_role(actor, [Role.INSTRUCTOR, Role.ADMIN])
             training_session = _get_session(db, session_id)
+            _require_session_access(db, actor, training_session, allow_trainee_owner=False)
             if training_session.status == SessionStatus.ACTIVE.value:
                 raise SessionManagerError(
                     "an active session must be completed or interrupted first"
@@ -267,8 +293,9 @@ class SessionManager:
     def mark_rating_applied(self, *, actor_id: str, session_id: str) -> None:
         """Mark a scored eligible session consumed by the skill model exactly once."""
         with self._session_factory.begin() as db:
-            require_role(db.get(User, actor_id), [Role.INSTRUCTOR, Role.ADMIN])
+            actor = require_role(db.get(User, actor_id), [Role.INSTRUCTOR, Role.ADMIN])
             training_session = _get_session(db, session_id)
+            _require_session_access(db, actor, training_session, allow_trainee_owner=False)
             if not training_session.rating_eligible:
                 return
             if training_session.score_json is None:
@@ -289,7 +316,17 @@ class SessionManager:
                 if trainee_id is not None and trainee_id != actor.user_id:
                     raise AuthorizationError("trainees may only list their own sessions")
                 visible_trainee_id = actor.user_id
-            query = select(TrainingSessionRecord).order_by(TrainingSessionRecord.session_id)
+            query = select(TrainingSessionRecord)
+            if actor.role == Role.INSTRUCTOR.value:
+                if visible_trainee_id is not None:
+                    trainee = db.get(User, visible_trainee_id)
+                    if trainee is None or trainee.role != Role.TRAINEE.value:
+                        raise SessionManagerError("trainee_id must identify a trainee")
+                    _require_instructor_unit_access(actor, trainee)
+                query = query.join(User, TrainingSessionRecord.trainee_id == User.user_id).where(
+                    User.unit_id == actor.unit_id
+                )
+            query = query.order_by(TrainingSessionRecord.session_id)
             if visible_trainee_id is not None:
                 query = query.where(TrainingSessionRecord.trainee_id == visible_trainee_id)
             return tuple(
@@ -314,7 +351,7 @@ class SessionManager:
         with self._session_factory() as db:
             actor = _get_actor(db, actor_id)
             training_session = _get_session(db, session_id)
-            _require_session_access(actor, training_session, allow_trainee_owner=True)
+            _require_session_access(db, actor, training_session, allow_trainee_owner=True)
             events = tuple(
                 json.loads(row.event_json)
                 for row in db.scalars(
@@ -350,14 +387,21 @@ def _get_session(db: Session, session_id: str) -> TrainingSessionRecord:
 
 
 def _require_session_access(
+    db: Session,
     actor: User,
     training_session: TrainingSessionRecord,
     *,
     allow_trainee_owner: bool,
 ) -> None:
-    """Enforce trainee ownership while allowing instructor/admin oversight."""
-    if actor.role in {Role.INSTRUCTOR.value, Role.ADMIN.value}:
+    """Enforce trainee ownership and instructor-local-unit access."""
+    if actor.role == Role.ADMIN.value:
         return
+    if actor.role == Role.INSTRUCTOR.value:
+        trainee = db.get(User, training_session.trainee_id)
+        if trainee is not None:
+            _require_instructor_unit_access(actor, trainee)
+            return
+        raise AuthorizationError("session trainee does not exist")
     is_own_trainee_session = (
         allow_trainee_owner
         and actor.role == Role.TRAINEE.value
@@ -366,6 +410,43 @@ def _require_session_access(
     if is_own_trainee_session:
         return
     raise AuthorizationError("actor cannot access this session")
+
+
+def _require_instructor_unit_access(actor: User, trainee: User) -> None:
+    """Limit instructors to trainees assigned to their persisted local unit."""
+    if actor.role == Role.INSTRUCTOR.value and actor.unit_id != trainee.unit_id:
+        raise AuthorizationError("instructors may only access trainees in their own unit")
+
+
+def _reject_seen_v1_fingerprint(
+    db: Session,
+    *,
+    trainee_id: str,
+    scenario: Mapping[str, Any],
+) -> None:
+    """Reject an exact prior V1 structure for one trainee without wall-clock state.
+
+    Fixed scenarios can still be assigned across different trainees for fair
+    unit comparisons. The check deliberately applies only to V1 procedural
+    payloads and compares their deterministic structural fingerprint.
+    """
+    if scenario.get("generator_version") != GENERATOR_V1_VERSION:
+        return
+    candidate = scenario_fingerprint(scenario)
+    prior_payloads = db.scalars(
+        select(TrainingSessionRecord.scenario_json).where(
+            TrainingSessionRecord.trainee_id == trainee_id
+        )
+    )
+    for scenario_json in prior_payloads:
+        prior = json.loads(scenario_json)
+        if (
+            prior.get("generator_version") == GENERATOR_V1_VERSION
+            and scenario_fingerprint(prior) == candidate
+        ):
+            raise SessionManagerError(
+                "V1 scenario repeats a prior structural fingerprint for this trainee"
+            )
 
 
 def _validate_event_against_scenario(event: Mapping[str, Any], scenario: Mapping[str, Any]) -> None:
@@ -382,6 +463,11 @@ def _validate_event_against_scenario(event: Mapping[str, Any], scenario: Mapping
 def _validate_user_id(user_id: str) -> None:
     if not isinstance(user_id, str) or not USER_ID_PATTERN.fullmatch(user_id):
         raise SessionManagerError("user_id must match the local identifier contract")
+
+
+def _validate_unit_id(unit_id: str) -> None:
+    if not isinstance(unit_id, str) or not UNIT_ID_PATTERN.fullmatch(unit_id):
+        raise SessionManagerError("unit_id must match the local identifier contract")
 
 
 def _validate_session_id(session_id: str) -> None:

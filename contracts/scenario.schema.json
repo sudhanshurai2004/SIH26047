@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://sih26047.local/contracts/scenario.schema.json",
-  "title": "SIH26047 Scenario Contract",
+  "title": "SIH 26247 Scenario Contract",
   "description": "Versioned, deterministic training scenario payload. Times are logical playback offsets in milliseconds, never wall-clock timestamps.",
   "type": "object",
   "additionalProperties": false,

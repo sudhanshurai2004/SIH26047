@@ -13,6 +13,16 @@ data/
 backups/
 out/
 
+# Local credentials and operator material (never commit real PINs or operational doctrine)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+
 # Node/Vite
 dashboard/node_modules/
 dashboard/dist/

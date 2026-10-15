@@ -39,7 +39,23 @@ def test_local_seed_to_scored_session_workflow(tmp_path: Path) -> None:
         == 200
     )
 
+    assert (
+        client.post(
+            "/api/users",
+            headers=admin,
+            json={
+                "user_id": "trainee-002",
+                "pin": "4567",
+                "role": "trainee",
+                "unit_id": "other-unit",
+            },
+        ).json()["unit_id"]
+        == "other-unit"
+    )
+
     instructor = _headers("instructor-001", "2345")
+    assert client.get("/api/units/other-unit/summary", headers=instructor).status_code == 403
+    assert client.get("/api/ratings/trainee-002", headers=instructor).status_code == 403
     scenario_response = client.post(
         "/api/scenarios/v0",
         headers=instructor,
@@ -54,6 +70,14 @@ def test_local_seed_to_scored_session_workflow(tmp_path: Path) -> None:
     )
     assert scenario_response.status_code == 200
     scenario = scenario_response.json()
+    assert (
+        client.post(
+            "/api/sessions",
+            headers=instructor,
+            json={"trainee_id": "trainee-002", "scenario": scenario, "selection_mode": "fixed"},
+        ).status_code
+        == 403
+    )
     session_response = client.post(
         "/api/sessions",
         headers=instructor,
@@ -107,6 +131,16 @@ def test_local_seed_to_scored_session_workflow(tmp_path: Path) -> None:
     assert session.json()["rating_applied"] is True
     assert client.get(f"/api/sessions/{session_id}/replay/500", headers=trainee).status_code == 200
     assert client.get("/api/ratings/trainee-001", headers=trainee).json()["detection"] > 0
+    unit_summary = client.get("/api/units/local-unit/summary", headers=instructor)
+    assert unit_summary.status_code == 200
+    assert unit_summary.json()["trainees"] == [
+        {
+            "trainee_id": "trainee-001",
+            "completed_sessions": 1,
+            "average_score": 100.0,
+            "rating_eligible_sessions": 1,
+        }
+    ]
 
 
 def test_adaptive_generation_and_admin_backup_routes(tmp_path: Path) -> None:

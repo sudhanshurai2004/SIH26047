@@ -13,9 +13,10 @@ from uuid import uuid4
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from core.adaptive import ScenarioOption, select_next_scenario, unit_trends
+from core.adaptive import ScenarioOption, select_next_scenario, unit_summary, unit_trends
 from core.api.runtime import LocalServices, create_local_services
 from core.db import (
     AuthorizationError,
@@ -48,6 +49,7 @@ class CredentialsInput(BaseModel):
 
 class UserCreateInput(CredentialsInput):
     role: Literal["trainee", "instructor", "admin"]
+    unit_id: str = Field(default="local-unit", min_length=3, max_length=64)
 
 
 class ScenarioProfileInput(BaseModel):
@@ -106,11 +108,15 @@ class AdaptiveSelectionInput(BaseModel):
     options: list[AdaptiveOptionInput] = Field(min_length=1, max_length=32)
 
 
-def create_app(services: LocalServices | None = None) -> FastAPI:
-    """Create a testable local-only app with explicit injected services."""
+def create_app(
+    services: LocalServices | None = None,
+    *,
+    dashboard_dir: Path | None = None,
+) -> FastAPI:
+    """Create a testable local-only app with an optional bundled dashboard."""
     local_services = services or create_local_services()
     app = FastAPI(
-        title="SIH26047 Offline Trainer API",
+        title="SIH 26247 Offline Trainer API",
         version="0.8.0",
         description="Local-only training service. No telemetry or external service calls.",
         docs_url="/api/docs",
@@ -162,7 +168,7 @@ def create_app(services: LocalServices | None = None) -> FastAPI:
             actor_id=payload.user_id,
             yaml_text=generic_path.read_text(encoding="utf-8"),
         )
-        return {"user_id": payload.user_id, "role": Role.ADMIN.value}
+        return {"user_id": payload.user_id, "role": Role.ADMIN.value, "unit_id": "local-unit"}
 
     @app.post("/api/auth/login", tags=["auth"])
     def login(payload: CredentialsInput) -> dict[str, str]:
@@ -170,7 +176,7 @@ def create_app(services: LocalServices | None = None) -> FastAPI:
             user = db.get(User, payload.user_id)
             if user is None or not verify_pin(payload.pin, user.pin_hash):
                 raise HTTPException(status_code=401, detail="invalid local credentials")
-            return {"user_id": user.user_id, "role": user.role}
+            return {"user_id": user.user_id, "role": user.role, "unit_id": user.unit_id}
 
     @app.post("/api/users", tags=["users"])
     def create_user(
@@ -181,8 +187,9 @@ def create_app(services: LocalServices | None = None) -> FastAPI:
             user_id=payload.user_id,
             role=Role(payload.role),
             pin=payload.pin,
+            unit_id=payload.unit_id,
         )
-        return {"user_id": payload.user_id, "role": payload.role}
+        return {"user_id": payload.user_id, "role": payload.role, "unit_id": payload.unit_id}
 
     @app.post("/api/scenarios/v0", tags=["scenarios"])
     def generate_v0(payload: GenerateV0Input, _: str = Depends(current_actor)) -> dict[str, Any]:
@@ -326,6 +333,16 @@ def create_app(services: LocalServices | None = None) -> FastAPI:
             )
         ]
 
+    @app.get("/api/units/{unit_id}/summary", tags=["adaptive"])
+    def unit_summary_route(unit_id: str, actor_id: str = Depends(current_actor)) -> dict[str, Any]:
+        return asdict(
+            unit_summary(
+                session_factory=local_services.session_factory,
+                actor_id=actor_id,
+                unit_id=unit_id,
+            )
+        )
+
     @app.get("/api/sessions/{session_id}/replay/{t_ms}", tags=["replay"])
     def replay(
         session_id: str, t_ms: int, actor_id: str = Depends(current_actor)
@@ -343,6 +360,13 @@ def create_app(services: LocalServices | None = None) -> FastAPI:
             payload.name,
         )
         return {"path": str(destination)}
+
+    if dashboard_dir is not None:
+        resolved_dashboard_dir = dashboard_dir.resolve()
+        if not resolved_dashboard_dir.is_dir():
+            raise ValueError("dashboard_dir must be an existing built dashboard directory")
+        # Mounted last, so explicit /api routes remain available to the local SPA.
+        app.mount("/", StaticFiles(directory=resolved_dashboard_dir, html=True), name="dashboard")
 
     return app
 

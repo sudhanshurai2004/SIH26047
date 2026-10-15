@@ -2,7 +2,7 @@
 config_version=5
 
 [application]
-config/name="SIH26047 Offline Trainer"
+config/name="SIH 26247 Offline Trainer"
 run/main_scene="res://2d/Main2D.tscn"
 
 [autoload]

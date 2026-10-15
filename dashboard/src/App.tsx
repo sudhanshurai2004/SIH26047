@@ -6,7 +6,8 @@ import {
   ScenarioPoint,
   ScenarioTarget,
   SessionSnapshot,
-  SessionSummary
+  SessionSummary,
+  UnitSummary
 } from "./api";
 
 const canManageSessions = (role: Credentials["role"]) => role === "admin" || role === "instructor";
@@ -38,8 +39,8 @@ function eventLabel(event: Record<string, unknown>) {
 }
 
 function LoginPanel({ onAuthenticated }: { onAuthenticated: (credentials: Credentials) => void }) {
-  const [userId, setUserId] = useState("admin-001");
-  const [pin, setPin] = useState("1234");
+  const [userId, setUserId] = useState("");
+  const [pin, setPin] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -114,12 +115,14 @@ export default function App() {
   const [scenarioSeed, setScenarioSeed] = useState(42);
   const [notice, setNotice] = useState<string | null>(null);
   const [trends, setTrends] = useState<Array<Record<string, unknown>>>([]);
+  const [unitSummary, setUnitSummary] = useState<UnitSummary | null>(null);
   const [ratings, setRatings] = useState<Record<string, number>>({});
   const [doctrines, setDoctrines] = useState<Array<{ doctrine_id: string; version: string }>>([]);
   const [doctrineYaml, setDoctrineYaml] = useState("");
   const [newUserId, setNewUserId] = useState("trainee-001");
   const [newUserPin, setNewUserPin] = useState("3456");
   const [newUserRole, setNewUserRole] = useState<Credentials["role"]>("trainee");
+  const [newUserUnitId, setNewUserUnitId] = useState("local-unit");
   const [backupName, setBackupName] = useState("trainer-backup");
 
   async function refreshSessions(activeCredentials: Credentials, selectedId?: string) {
@@ -133,12 +136,14 @@ export default function App() {
         setReplayMs(0);
       }
       if (canManageSessions(activeCredentials.role)) {
-        const [nextTrends, nextRatings, nextDoctrines] = await Promise.all([
+        const [nextTrends, nextUnitSummary, nextRatings, nextDoctrines] = await Promise.all([
           api.getTrends(activeCredentials),
+          api.getUnitSummary(activeCredentials, activeCredentials.unitId),
           api.getRatings(activeCredentials, traineeId),
           api.getDoctrines(activeCredentials)
         ]);
         setTrends(nextTrends);
+        setUnitSummary(nextUnitSummary);
         setRatings(nextRatings);
         setDoctrines(nextDoctrines);
       }
@@ -223,8 +228,14 @@ export default function App() {
       return;
     }
     try {
-      const user = await api.createUser(credentials, newUserId, newUserPin, newUserRole);
-      setNotice(`Created local ${user.role} ${user.user_id}.`);
+      const user = await api.createUser(
+        credentials,
+        newUserId,
+        newUserPin,
+        newUserRole,
+        newUserUnitId
+      );
+      setNotice(`Created local ${user.role} ${user.user_id} in ${user.unit_id}.`);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Could not create the local user.");
     }
@@ -269,6 +280,7 @@ export default function App() {
         <div className="identity">
           <span>{credentials.userId}</span>
           <span className="role-pill">{credentials.role}</span>
+          <span className="role-pill">{credentials.unitId}</span>
           <button className="secondary-button" onClick={() => setCredentials(null)} type="button">
             Sign out
           </button>
@@ -405,18 +417,37 @@ export default function App() {
 
         {canManageSessions(credentials.role) ? (
           <section className="panel trends-panel">
-            <div className="panel-heading"><h2>Unit trends</h2></div>
-            {trends.length ? (
+            <div className="panel-heading"><h2>Unit trends · {credentials.unitId}</h2></div>
+            {unitSummary?.trends.length ? (
               <ul className="trend-list">
-                {trends.map((trend) => (
-                  <li key={String(trend.selection_mode)}>
-                    <strong>{String(trend.selection_mode)}</strong>
-                    <span>{String(trend.completed_sessions)} scored sessions</span>
-                    <span>average {String(trend.average_score)}</span>
+                {unitSummary.trends.map((trend) => (
+                  <li key={trend.selection_mode}>
+                    <strong>{trend.selection_mode}</strong>
+                    <span>{trend.completed_sessions} scored sessions</span>
+                    <span>average {trend.average_score}</span>
                   </li>
                 ))}
               </ul>
-            ) : <p className="muted">No scored local sessions available for trends.</p>}
+            ) : <p className="muted">No scored local sessions available for this unit.</p>}
+            <h3>Per-trainee AAR</h3>
+            {unitSummary?.trainees.length ? (
+              <ul className="trend-list">
+                {unitSummary.trainees.map((trainee) => (
+                  <li key={trainee.trainee_id}>
+                    <strong>{trainee.trainee_id}</strong>
+                    <span>{trainee.completed_sessions} scored sessions</span>
+                    <span>
+                      {trainee.average_score === null
+                        ? "no score yet"
+                        : `average ${trainee.average_score}`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : <p className="muted">No trainees are assigned to this local unit.</p>}
+            {credentials.role === "admin" && trends.length ? (
+              <p className="muted">Admin-wide mode trends are available through the local API.</p>
+            ) : null}
           </section>
         ) : null}
 
@@ -487,6 +518,13 @@ export default function App() {
                     <option value="instructor">Instructor</option>
                     <option value="admin">Admin</option>
                   </select>
+                </label>
+                <label>
+                  Unit ID
+                  <input
+                    onChange={(event) => setNewUserUnitId(event.target.value)}
+                    value={newUserUnitId}
+                  />
                 </label>
                 <button onClick={() => void createLocalUser()} type="button">Create local user</button>
               </div>

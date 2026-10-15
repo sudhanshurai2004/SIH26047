@@ -43,19 +43,24 @@ def create_session_factory(engine: Engine) -> sessionmaker[Session]:
 def initialize_database(engine: Engine) -> None:
     """Create local tables and apply the small additive SQLite compatibility migration."""
     Base.metadata.create_all(engine)
-    existing_columns = {
+    existing_session_columns = {
         column["name"] for column in inspect(engine).get_columns("training_sessions")
     }
+    existing_user_columns = {column["name"] for column in inspect(engine).get_columns("users")}
     with engine.begin() as connection:
         # These migrations are fixed source statements, not interpolated user queries.
-        if "selection_mode" not in existing_columns:
+        if "unit_id" not in existing_user_columns:
+            connection.execute(
+                text("ALTER TABLE users ADD COLUMN unit_id TEXT NOT NULL DEFAULT 'local-unit'")
+            )
+        if "selection_mode" not in existing_session_columns:
             connection.execute(
                 text(
                     "ALTER TABLE training_sessions ADD COLUMN selection_mode "
                     "TEXT NOT NULL DEFAULT 'fixed'"
                 )
             )
-        if "rating_applied" not in existing_columns:
+        if "rating_applied" not in existing_session_columns:
             connection.execute(
                 text(
                     "ALTER TABLE training_sessions ADD COLUMN rating_applied "

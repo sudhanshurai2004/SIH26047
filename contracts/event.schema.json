@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://sih26047.local/contracts/event.schema.json",
-  "title": "SIH26047 Trainee Event Contract",
+  "title": "SIH 26247 Trainee Event Contract",
   "description": "Idempotent trainee action event. t_offset_ms is logical session playback time, not a wall-clock timestamp.",
   "type": "object",
   "additionalProperties": false,

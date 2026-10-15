@@ -6,9 +6,22 @@ by `requirements-dev.lock` and `dashboard/package-lock.json`; it intentionally
 includes development and transitive packages. No AGPL dependency and no
 Ultralytics YOLO dependency is used.
 
-The project itself has no licence declaration yet. This list does not grant any
-licence to project source code. Licence identifiers below are package metadata;
-for distribution, retain the original notices shipped by each package.
+The project source is licensed under the repository [`LICENSE`](../LICENSE)
+(MIT), adopted for the training-only source package. This list does not alter
+third-party licences. Licence identifiers below are package metadata; for
+distribution, retain the original notices shipped by each package.
+
+## Release audit note (2026-10-15)
+
+- `requirements*.lock` and `dashboard/package-lock.json` were reviewed against
+  this inventory; no dependency is labelled AGPL in the committed lock files.
+- Ultralytics/YOLO is not declared, imported, or packaged. No model or external
+  dataset is bundled.
+- Repository-authored visuals are simple Godot/UI primitives; no third-party
+  3D model, texture, sound, doctrine, or operational data is shipped.
+- `npm --prefix dashboard audit --audit-level=high` and `pip check` outcomes
+  are recorded with their executed output in `docs/READINESS.md`. An audit
+  reports dependency metadata, not a guarantee of future vulnerability status.
 
 ## Runtime tooling
 

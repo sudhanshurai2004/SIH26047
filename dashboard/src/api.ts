@@ -4,6 +4,7 @@ export interface Credentials {
   userId: string;
   pin: string;
   role: Role;
+  unitId: string;
 }
 
 export interface SessionSummary {
@@ -84,6 +85,25 @@ export interface SessionSnapshot {
 interface LoginResponse {
   user_id: string;
   role: Role;
+  unit_id: string;
+}
+
+export interface UnitTraineeSummary {
+  trainee_id: string;
+  completed_sessions: number;
+  average_score: number | null;
+  rating_eligible_sessions: number;
+}
+
+export interface UnitSummary {
+  unit_id: string;
+  trainees: UnitTraineeSummary[];
+  trends: Array<{
+    selection_mode: "fixed" | "adaptive";
+    completed_sessions: number;
+    average_score: number;
+    rating_eligible_sessions: number;
+  }>;
 }
 
 export class ApiError extends Error {
@@ -119,7 +139,12 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ user_id: userId, pin })
     });
-    return { userId: response.user_id, pin, role: response.role };
+    return {
+      userId: response.user_id,
+      pin,
+      role: response.role,
+      unitId: response.unit_id
+    };
   },
 
   async login(userId: string, pin: string): Promise<Credentials> {
@@ -127,7 +152,12 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ user_id: userId, pin })
     });
-    return { userId: response.user_id, pin, role: response.role };
+    return {
+      userId: response.user_id,
+      pin,
+      role: response.role,
+      unitId: response.unit_id
+    };
   },
 
   listSessions(credentials: Credentials): Promise<SessionSummary[]> {
@@ -232,6 +262,10 @@ export const api = {
     return request<Array<Record<string, unknown>>>("/trends", {}, credentials);
   },
 
+  getUnitSummary(credentials: Credentials, unitId: string): Promise<UnitSummary> {
+    return request<UnitSummary>(`/units/${encodeURIComponent(unitId)}/summary`, {}, credentials);
+  },
+
   getDoctrines(credentials: Credentials): Promise<DoctrineSummary[]> {
     return request<DoctrineSummary[]>("/doctrines", {}, credentials);
   },
@@ -248,11 +282,12 @@ export const api = {
     credentials: Credentials,
     userId: string,
     pin: string,
-    role: Role
-  ): Promise<{ user_id: string; role: Role }> {
-    return request<{ user_id: string; role: Role }>(
+    role: Role,
+    unitId: string
+  ): Promise<{ user_id: string; role: Role; unit_id: string }> {
+    return request<{ user_id: string; role: Role; unit_id: string }>(
       "/users",
-      { method: "POST", body: JSON.stringify({ user_id: userId, pin, role }) },
+      { method: "POST", body: JSON.stringify({ user_id: userId, pin, role, unit_id: unitId }) },
       credentials
     );
   },

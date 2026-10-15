@@ -7,7 +7,13 @@ from core.adaptive.elo import (
     SkillUpdate,
     select_next_scenario,
 )
-from core.adaptive.trends import TrendPoint, unit_trends
+from core.adaptive.trends import (
+    TrendPoint,
+    UnitSummary,
+    UnitTraineeSummary,
+    unit_summary,
+    unit_trends,
+)
 
 __all__ = [
     "DEFAULT_RATING",
@@ -15,6 +21,9 @@ __all__ = [
     "SkillModel",
     "SkillUpdate",
     "TrendPoint",
+    "UnitSummary",
+    "UnitTraineeSummary",
     "select_next_scenario",
+    "unit_summary",
     "unit_trends",
 ]

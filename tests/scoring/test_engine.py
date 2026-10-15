@@ -9,7 +9,13 @@ from uuid import NAMESPACE_URL, uuid5
 import pytest
 
 from core.generator import ScenarioProfile, generate_scenario
-from core.scoring import DoctrineValidationError, load_doctrine, score_scenario, validate_doctrine
+from core.scoring import (
+    DoctrineValidationError,
+    ScoringError,
+    load_doctrine,
+    score_scenario,
+    validate_doctrine,
+)
 
 PROFILE = ScenarioProfile(
     profile_id="score-single-target",
@@ -137,6 +143,30 @@ def test_incorrect_classification_keeps_other_generic_nodes_scoreable() -> None:
         "correct",
         "correct",
     ]
+
+
+def test_score_scenario_deduplicates_identical_event_retries() -> None:
+    scenario = _scenario()
+    visible_at = int(scenario["targets"][0]["t_visible_ms"])
+    doctrine = load_doctrine(DOCTRINE_PATH)
+    detect = _event(scenario, action="detect", sequence=0, t_offset_ms=visible_at)
+
+    once = score_scenario(scenario, [detect], doctrine)
+    retried = score_scenario(scenario, [detect, dict(detect)], doctrine)
+
+    assert retried == once
+
+
+def test_score_scenario_rejects_conflicting_event_id_reuse() -> None:
+    scenario = _scenario()
+    visible_at = int(scenario["targets"][0]["t_visible_ms"])
+    doctrine = load_doctrine(DOCTRINE_PATH)
+    detect = _event(scenario, action="detect", sequence=0, t_offset_ms=visible_at)
+    conflicting = dict(detect)
+    conflicting["t_offset_ms"] = visible_at + 100
+
+    with pytest.raises(ScoringError, match="event_id is already bound"):
+        score_scenario(scenario, [detect, conflicting], doctrine)
 
 
 def test_interruption_event_marks_report_ineligible_for_skill_rating() -> None:

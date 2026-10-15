@@ -35,6 +35,7 @@ class User(Base):
 
     user_id: Mapped[str] = mapped_column(String(64), primary_key=True)
     role: Mapped[str] = mapped_column(String(16), nullable=False)
+    unit_id: Mapped[str] = mapped_column(String(64), nullable=False, default="local-unit")
     pin_hash: Mapped[str] = mapped_column(String(512), nullable=False)
 
 

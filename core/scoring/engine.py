@@ -8,6 +8,7 @@ from typing import Any
 
 from core.contracts import ContractValidationError, validate_payload
 from core.scoring.doctrine import DoctrineValidationError, validate_doctrine
+from core.serialization import canonical_json
 
 
 class ScoringError(ValueError):
@@ -74,6 +75,7 @@ def score_scenario(
     """
     event_list = [dict(event) for event in events]
     _validate_inputs(scenario, event_list, doctrine)
+    event_list = _deduplicate_events(event_list)
     sorted_events = sorted(
         event_list,
         key=lambda event: (event["sequence"], event["t_offset_ms"], event["event_id"]),
@@ -166,6 +168,28 @@ def _validate_inputs(
                 raise ScoringError("event t_offset_ms exceeds scenario duration")
     except (ContractValidationError, DoctrineValidationError) as error:
         raise ScoringError(str(error)) from error
+
+
+def _deduplicate_events(events: Iterable[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    """Apply event-ID idempotency even when scoring is used outside sessions.
+
+    The database service already treats an identical retry as idempotent and
+    rejects a reused ID with changed content. Keeping the same rule in this
+    pure function makes exported/offline event-log scoring equally safe.
+    """
+    canonical_by_id: dict[str, str] = {}
+    unique_events: list[dict[str, Any]] = []
+    for supplied_event in events:
+        event = dict(supplied_event)
+        event_id = str(event["event_id"])
+        encoded = canonical_json(event)
+        existing = canonical_by_id.get(event_id)
+        if existing is None:
+            canonical_by_id[event_id] = encoded
+            unique_events.append(event)
+        elif existing != encoded:
+            raise ScoringError("event_id is already bound to a different payload")
+    return unique_events
 
 
 def _next_event(
