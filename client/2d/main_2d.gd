@@ -74,6 +74,10 @@ func _on_frame_changed(playback_ms: int, positions: Dictionary) -> void:
     timeline.value = playback_ms
     status_label.text = "%d ms" % playback_ms
     for target_id in positions:
+        # ``load_scenario`` emits an initial frame before this scene has created
+        # its visual markers; later playback frames update the corresponding UI.
+        if not markers.has(target_id):
+            continue
         var marker: ColorRect = markers[target_id]
         var position: Vector2 = positions[target_id]
         marker.position = radar.size * 0.5 + Vector2(position.x, -position.y) * 0.13 - marker.size * 0.5
