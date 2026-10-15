@@ -10,12 +10,15 @@ extends Control
 @onready var classify_select: OptionButton = $Layout/Controls/ClassifySelect
 @onready var assess_select: OptionButton = $Layout/Controls/AssessSelect
 @onready var respond_select: OptionButton = $Layout/Controls/RespondSelect
+# Resolve the autoload through the scene tree so the project compiles in a
+# standalone/headless import as well as editor playback.
+@onready var event_recorder: Node = get_node("/root/EventRecorder")
 
 var markers := {}
 var current_scenario: Dictionary = {}
 
 func _ready() -> void:
-    EventRecorder.event_recorded.connect(local_api.sync_event)
+    event_recorder.connect("event_recorded", local_api.sync_event)
     local_api.session_loaded.connect(_load_assigned_session)
     local_api.session_completion_finished.connect(_on_session_completion_finished)
     player.frame_changed.connect(_on_frame_changed)
@@ -51,9 +54,14 @@ func _load_scenario(next_scenario: Dictionary, next_session_id: String, next_tra
     markers.clear()
     player.load_scenario(current_scenario)
     timeline.max_value = int(current_scenario.duration_ms)
-    EventRecorder.configure(next_session_id, current_scenario.scenario_id, next_trainee_id)
+    event_recorder.call(
+        "configure",
+        next_session_id,
+        current_scenario.scenario_id,
+        next_trainee_id
+    )
     if next_session_id == local_api.session_id and not local_api.actor_id.is_empty():
-        local_api.sync_outbox(EventRecorder.outbox_events())
+        local_api.sync_outbox(event_recorder.call("outbox_events"))
     for target in current_scenario.targets:
         target_select.add_item(target.target_id)
         var marker := ColorRect.new()
@@ -80,24 +88,27 @@ func _on_timeline_value_changed(value: float) -> void:
     player.seek(int(value))
 
 func _on_detect_pressed() -> void:
-    EventRecorder.record_detect(_selected_target_id(), player.playback_ms)
+    event_recorder.call("record_detect", _selected_target_id(), player.playback_ms)
 
 func _on_classify_pressed() -> void:
-    EventRecorder.record_classify(
+    event_recorder.call(
+        "record_classify",
         _selected_target_id(),
         classify_select.get_item_text(classify_select.selected),
         player.playback_ms
     )
 
 func _on_assess_pressed() -> void:
-    EventRecorder.record_assess(
+    event_recorder.call(
+        "record_assess",
         _selected_target_id(),
         assess_select.get_item_text(assess_select.selected),
         player.playback_ms
     )
 
 func _on_respond_pressed() -> void:
-    EventRecorder.record_respond(
+    event_recorder.call(
+        "record_respond",
         _selected_target_id(),
         respond_select.get_item_text(respond_select.selected),
         player.playback_ms
