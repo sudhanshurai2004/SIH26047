@@ -84,6 +84,47 @@ jobs:
             godot-headless.log
           if-no-files-found: warn
 
+  record-godot-logs:
+    name: Record successful Godot smoke logs
+    needs: godot-headless
+    if: >-
+      github.event_name == 'push' &&
+      github.repository == 'sudhanshurai2004/SIH26047' &&
+      github.ref == 'refs/heads/arena/14719d8a-sih26047'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Check out tracked Arena branch
+        uses: actions/checkout@v4
+        with:
+          ref: arena/14719d8a-sih26047
+          fetch-depth: 0
+
+      - name: Download actual successful Godot logs
+        uses: actions/download-artifact@v4
+        with:
+          name: godot-native-logs
+          path: godot-native-logs
+
+      - name: Commit actual Godot smoke logs when changed
+        run: |
+          set -euo pipefail
+          test -s godot-native-logs/godot-import.log
+          test -s godot-native-logs/godot-headless.log
+          mkdir -p docs/evidence
+          cp godot-native-logs/godot-import.log docs/evidence/godot-import-ci.log
+          cp godot-native-logs/godot-headless.log docs/evidence/godot-headless-ci.log
+          if git diff --quiet -- docs/evidence; then
+            echo "GODOT_LOGS_ALREADY_CURRENT"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/evidence/godot-import-ci.log docs/evidence/godot-headless-ci.log
+          git commit -m "docs: record Godot CI smoke logs"
+          git push origin HEAD:arena/14719d8a-sih26047
+
   offline-wheelhouse:
     name: Offline wheelhouse install
     runs-on: ubuntu-24.04
