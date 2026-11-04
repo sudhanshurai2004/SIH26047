@@ -25,23 +25,32 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             texlive-latex-base texlive-latex-recommended \
             texlive-latex-extra texlive-fonts-recommended \
-            texlive-pictures texlive-science latexmk
+            texlive-fonts-extra texlive-pictures texlive-science latexmk
 
       - name: Compile
         run: |
-          set -eu
+          set -u
           mkdir -p out
+          rc=0
           for f in resume/*.tex; do
             base=$(basename "$f" .tex)
             echo "::group::Compiling $base"
-            pdflatex -interaction=nonstopmode -halt-on-error -output-directory=out "$f" > "out/$base.pass1.log" 2>&1 || {
-              echo "PDFLATEX FAILED for $base"; tail -40 "out/$base.pass1.log"; exit 1; }
-            pdflatex -interaction=nonstopmode -halt-on-error -output-directory=out "$f" > "out/$base.log" 2>&1 || {
-              echo "PDFLATEX FAILED (pass 2) for $base"; tail -40 "out/$base.log"; exit 1; }
+            pdflatex -interaction=nonstopmode -output-directory=out "$f" > "out/$base.pass1.log" 2>&1
+            pdflatex -interaction=nonstopmode -output-directory=out "$f" > "out/$base.log" 2>&1
+            status=$?
+            echo "--- first errors ---"
+            grep -nE "^! |^l\.[0-9]+|Emergency stop|File .* not found" "out/$base.log" | head -12 || echo "none"
             echo "--- warnings ---"
             grep -E "Overfull|Underfull|LaTeX Warning" "out/$base.log" | head -20 || echo "none"
+            if [ $status -ne 0 ]; then
+              rc=1
+              first=$(grep -m1 -E "^! " "out/$base.log" | cut -c1-180)
+              line=$(grep -m1 -oE "^l\.[0-9]+" "out/$base.log")
+              echo "::error title=pdflatex failed: $base::${first:-unknown error} ${line}"
+            fi
             echo "::endgroup::"
           done
+          exit $rc
 
       - name: Page counts
         run: |
