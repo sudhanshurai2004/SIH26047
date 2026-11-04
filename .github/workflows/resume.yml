@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -54,21 +54,6 @@ jobs:
           done
           exit $rc
 
-      - name: Publish build log for inspection
-        if: always()
-        run: |
-          mkdir -p ci-logs
-          for f in out/*.log out/*.pdf; do
-            [ -e "$f" ] || continue
-            cp "$f" "ci-logs/$(basename "$f")"
-          done
-          git config user.name  "ci-log-bot"
-          git config user.email "ci-log-bot@users.noreply.github.com"
-          git checkout -B ci-logs
-          git add -f ci-logs
-          git commit -m "ci: resume build logs for ${GITHUB_SHA}" || echo "nothing to commit"
-          git push -f origin ci-logs || echo "log push failed"
-
       - name: Page counts
         run: |
           python3 scripts/resume_pages.py out
@@ -78,7 +63,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: resume-build
-          path: |
-            out/*.pdf
-            out/*.log
+          path: out/*.pdf
           if-no-files-found: warn
