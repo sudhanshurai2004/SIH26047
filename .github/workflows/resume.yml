@@ -46,7 +46,9 @@ jobs:
               rc=1
               first=$(grep -m1 -E "^! " "out/$base.log" | cut -c1-180)
               line=$(grep -m1 -oE "^l\.[0-9]+" "out/$base.log")
-              echo "::error title=pdflatex failed: $base::${first:-unknown error} ${line}"
+              echo "::error file=resume/$base.tex::pdflatex failed - ${first:-unknown error} ${line}"
+              echo "--- last 25 log lines ---"
+              tail -25 "out/$base.log"
             fi
             echo "::endgroup::"
           done
@@ -57,8 +59,11 @@ jobs:
           python3 scripts/resume_pages.py out
 
       - name: Upload PDFs
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: resume-pdfs
-          path: out/*.pdf
-          if-no-files-found: error
+          name: resume-build
+          path: |
+            out/*.pdf
+            out/*.log
+          if-no-files-found: warn
