@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -53,6 +53,21 @@ jobs:
             echo "::endgroup::"
           done
           exit $rc
+
+      - name: Publish build log for inspection
+        if: always()
+        run: |
+          mkdir -p ci-logs
+          for f in out/*.log; do
+            [ -e "$f" ] || continue
+            cp "$f" "ci-logs/$(basename "$f")"
+          done
+          git config user.name  "ci-log-bot"
+          git config user.email "ci-log-bot@users.noreply.github.com"
+          git checkout -B ci-logs
+          git add -f ci-logs
+          git commit -m "ci: resume build logs for ${GITHUB_SHA}" || echo "nothing to commit"
+          git push -f origin ci-logs || echo "log push failed"
 
       - name: Page counts
         run: |
