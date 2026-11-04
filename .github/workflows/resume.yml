@@ -58,7 +58,7 @@ jobs:
         if: always()
         run: |
           mkdir -p ci-logs
-          for f in out/*.log; do
+          for f in out/*.log out/*.pdf; do
             [ -e "$f" ] || continue
             cp "$f" "ci-logs/$(basename "$f")"
           done
